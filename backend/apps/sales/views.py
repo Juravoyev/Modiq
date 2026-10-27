@@ -1,9 +1,16 @@
 from rest_framework import mixins, viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .models import Sale
-from .serializers import SaleCreateSerializer, SaleManagerSerializer, SaleSerializer
-from .services import LineInput, create_sale
+from .serializers import (
+    SaleCreateSerializer,
+    SaleManagerSerializer,
+    SaleReturnCreateSerializer,
+    SaleReturnSerializer,
+    SaleSerializer,
+)
+from .services import LineInput, create_sale, return_sale_items
 
 
 class SaleViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,
@@ -18,12 +25,15 @@ class SaleViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Creat
         return Sale.objects.filter(
             business=self.request.business, branch__in=self.request.membership.allowed_branches()
         ).select_related("branch", "cashier").prefetch_related(
-            "lines__variant__product", "lines__variant__color", "lines__variant__size"
+            "lines__variant__product", "lines__variant__color", "lines__variant__size", "lines__return_lines",
+            "returns__lines__sale_line__variant",
         )
 
     def get_serializer_class(self):
         if self.action == "create":
             return SaleCreateSerializer
+        if self.action == "return_items":
+            return SaleReturnCreateSerializer
         if getattr(self, "swagger_fake_view", False):
             return SaleManagerSerializer
         return SaleManagerSerializer if self.request.membership.is_manager else SaleSerializer
@@ -41,3 +51,15 @@ class SaleViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Creat
         out_cls = SaleManagerSerializer if request.membership.is_manager else SaleSerializer
         sale = self.get_queryset().get(pk=sale.pk)
         return Response(out_cls(sale, context={"request": request}).data, status=201 if created else 200)
+
+    @action(detail=True, methods=["post"], url_path="return")
+    def return_items(self, request, pk=None):
+        """Tovarni qaytarish: qoldiq tiklanadi, summa tushumdan ayiriladi."""
+        sale = self.get_object()  # tenant va filial ruxsati shu yerda tekshiriladi
+        s = SaleReturnCreateSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        sale_return = return_sale_items(
+            sale_id=sale.pk, user=request.user, reason=s.validated_data["reason"],
+            items=[(i["sale_line"], i["quantity"]) for i in s.validated_data["lines"]],
+        )
+        return Response(SaleReturnSerializer(sale_return).data, status=201)

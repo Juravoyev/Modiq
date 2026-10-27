@@ -2,12 +2,14 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from django.db import IntegrityError, transaction
+from django.db.models import Sum
 from rest_framework.exceptions import ValidationError
 
+from apps.discounts.services import active_discounts
 from apps.inventory.models import StockMovement
 from apps.inventory.services import change_stock
 
-from .models import Sale, SaleLine
+from .models import Sale, SaleLine, SaleReturn, SaleReturnLine
 
 ZERO = Decimal("0.00")
 
@@ -19,8 +21,9 @@ class LineInput:
     discount_amount: Decimal = ZERO
 
 
-def calculate_line(variant, quantity: int, discount_amount: Decimal):
-    unit_price = variant.effective_sale_price
+def calculate_line(variant, quantity: int, discount_amount: Decimal, promo=None):
+    """promo: shu kuni amal qilayotgan tasdiqlangan chegirma (bo'lsa), narx undan olinadi."""
+    unit_price = promo.price_after if promo else variant.effective_sale_price
     unit_cost = variant.effective_purchase_price
     gross = unit_price * quantity
     if discount_amount < 0 or discount_amount > gross:
@@ -32,6 +35,7 @@ def calculate_line(variant, quantity: int, discount_amount: Decimal):
         "discount_amount": discount_amount,
         "line_total": line_total,
         "below_cost": line_total < unit_cost * quantity,
+        "discount": promo,
     }
 
 
@@ -60,8 +64,12 @@ def _create_sale(business, branch, user, membership, lines, payment_type, idempo
     if len(ids) != len(set(ids)):
         raise ValidationError({"detail": "Bir variant savatda faqat bir marta bo'lishi kerak."})
 
-    computed = [(line, calculate_line(line.variant, line.quantity, line.discount_amount)) for line in lines]
-    below = [line.variant.sku for line, c in computed if c["below_cost"]]
+    promos = {d.variant_id: d for d in active_discounts(business).filter(variant_id__in=ids)}
+    computed = [(line, calculate_line(line.variant, line.quantity, line.discount_amount, promos.get(line.variant.id)))
+                for line in lines]
+    # Menejer tannarxdan past chegirmani oldindan tasdiqlagan bo'lsa, kassir qo'shimcha chegirmasiz sota oladi.
+    below = [line.variant.sku for line, c in computed
+             if c["below_cost"] and not (c["discount"] and c["discount"].below_cost and not c["discount_amount"])]
     if below:
         if not membership.is_manager:
             raise ValidationError({"detail": f"Narx xarid narxidan past: {', '.join(below)}. "
@@ -71,7 +79,7 @@ def _create_sale(business, branch, user, membership, lines, payment_type, idempo
             raise ValidationError({"detail": f"Narx xarid narxidan past: {', '.join(below)}. "
                                              "Davom etish uchun buni tasdiqlang.", "code": "below_cost"})
 
-    subtotal = sum((line.variant.effective_sale_price * line.quantity for line, _ in computed), ZERO)
+    subtotal = sum((c["unit_price"] * line.quantity for line, c in computed), ZERO)
     discount_total = sum((c["discount_amount"] for _, c in computed), ZERO)
     cost_total = sum((c["unit_cost"] * line.quantity for line, c in computed), ZERO)
     # Savdo qatori birinchi yaratiladi: bir xil idempotency_key bilan parallel so'rov shu yerda kutib turadi.
@@ -85,3 +93,44 @@ def _create_sale(business, branch, user, membership, lines, payment_type, idempo
                      kind=StockMovement.Kind.SALE, user=user, ref=sale)
         SaleLine.objects.create(sale=sale, variant=line.variant, quantity=line.quantity, **c)
     return sale
+
+
+@transaction.atomic
+def return_sale_items(*, sale_id, user, items, reason=""):
+    """Savdodagi tovarlarni qaytaradi. items: [(sale_line_id, quantity), ...].
+
+    Savdo qatori qulflanadi, shuning uchun bir tovarni parallel so'rovlar bilan sotilganidan ko'p qaytarib bo'lmaydi.
+    Qaytariladigan summa qator bo'yicha proporsional: line_total / quantity * qaytgan miqdor.
+    """
+    sale = Sale.objects.select_for_update().select_related("branch").get(pk=sale_id)
+    if not items:
+        raise ValidationError({"detail": "Qaytariladigan tovarni tanlang."})
+    ids = [line_id for line_id, _ in items]
+    if len(ids) != len(set(ids)):
+        raise ValidationError({"detail": "Bir qator faqat bir marta ko'rsatilishi kerak."})
+    lines = {line.id: line for line in sale.lines.select_related("variant__product", "variant__color", "variant__size")}
+    returned = dict(
+        SaleReturnLine.objects.filter(sale_line__sale=sale).values("sale_line").annotate(q=Sum("quantity"))
+        .values_list("sale_line", "q")
+    )
+    plan = []
+    for line_id, qty in items:
+        line = lines.get(line_id)
+        if line is None:
+            raise ValidationError({"detail": "Qator bu savdoga tegishli emas."})
+        available = line.quantity - returned.get(line_id, 0)
+        if qty <= 0 or qty > available:
+            raise ValidationError({"detail": f"{line.variant.sku}: ko'pi bilan {available} dona qaytarish mumkin."})
+        refund = (line.line_total / line.quantity * qty).quantize(Decimal("0.01"))
+        plan.append((line, qty, refund))
+
+    sale_return = SaleReturn.objects.create(
+        business=sale.business, sale=sale, branch=sale.branch, user=user, reason=reason,
+        refund_total=sum((r for _, _, r in plan), ZERO),
+        cost_total=sum((line.unit_cost * qty for line, qty, _ in plan), ZERO),
+    )
+    for line, qty, refund in sorted(plan, key=lambda p: p[0].variant_id):
+        change_stock(business=sale.business, branch=sale.branch, variant=line.variant, delta=qty,
+                     kind=StockMovement.Kind.SALE_RETURN, user=user, ref=sale_return)
+        SaleReturnLine.objects.create(sale_return=sale_return, sale_line=line, quantity=qty, refund_amount=refund)
+    return sale_return

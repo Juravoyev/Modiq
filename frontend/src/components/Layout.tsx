@@ -3,24 +3,32 @@ import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { Logo } from "./Logo";
 
-const NAV = [
-  { to: "/", label: "Kassa", icon: "🧾", end: true },
-  { to: "/products", label: "Tovarlar", icon: "👕" },
-  { to: "/receipts", label: "Kirim", icon: "📥" },
-  { to: "/stock", label: "Qoldiq", icon: "📦" },
-  { to: "/sales", label: "Savdolar", icon: "📈" },
+export const NAV = [
+  { to: "/dashboard", label: "Bosh sahifa", icon: "🏠", managerOnly: false, mobile: true },
+  { to: "/pos", label: "Kassa", icon: "🧾", managerOnly: false, mobile: true },
+  { to: "/products", label: "Tovarlar", icon: "👕", managerOnly: false, mobile: true },
+  { to: "/insights", label: "Aqlli tavsiyalar", icon: "💡", managerOnly: false, mobile: true },
+  { to: "/stock", label: "Qoldiq", icon: "📦", managerOnly: false, mobile: false },
+  { to: "/receipts", label: "Kirim", icon: "📥", managerOnly: false, mobile: false },
+  { to: "/transfers", label: "Ko'chirish", icon: "🔁", managerOnly: false, mobile: false },
+  { to: "/counts", label: "Inventarizatsiya", icon: "📋", managerOnly: false, mobile: false },
+  { to: "/sales", label: "Savdolar", icon: "📈", managerOnly: false, mobile: false },
+  { to: "/discounts", label: "Chegirmalar", icon: "🏷️", managerOnly: true, mobile: false },
+  { to: "/reports", label: "Hisobotlar", icon: "📊", managerOnly: true, mobile: false },
+  { to: "/settings", label: "Sozlamalar", icon: "⚙️", managerOnly: true, mobile: false },
 ];
 
 export function Layout() {
-  const { me, branch, setBranchId, logout } = useAuth();
+  const { me, branch, setBranchId, logout, isManager } = useAuth();
   const branches = me?.branches ?? [];
+  const items = NAV.filter((n) => !n.managerOnly || isManager);
 
   return (
     <div className="app">
       <aside className="sidebar">
         <div className="brand"><Logo /> Modiq</div>
-        {NAV.map((n) => (
-          <NavLink key={n.to} to={n.to} end={n.end} className="nav-link">
+        {items.map((n) => (
+          <NavLink key={n.to} to={n.to} className="nav-link">
             <span aria-hidden="true">{n.icon}</span> {n.label}
           </NavLink>
         ))}
@@ -42,9 +50,7 @@ export function Layout() {
               <span className="muted">{branch?.name}</span>
             )}
           </div>
-          <div className="row" style={{ gap: 8 }}>
-            <button className="btn btn-secondary btn-sm" onClick={logout}>Chiqish</button>
-          </div>
+          <button className="btn btn-secondary btn-sm" onClick={logout}>Chiqish</button>
         </header>
 
         <main className="content">
@@ -55,12 +61,13 @@ export function Layout() {
       </div>
 
       <nav className="bottom-nav" aria-label="Asosiy menyu">
-        {NAV.map((n) => (
-          <NavLink key={n.to} to={n.to} end={n.end}>
+        {items.filter((n) => n.mobile).map((n) => (
+          <NavLink key={n.to} to={n.to}>
             <span aria-hidden="true" style={{ fontSize: 20 }}>{n.icon}</span>
-            {n.label}
+            {n.label === "Aqlli tavsiyalar" ? "Tavsiyalar" : n.label}
           </NavLink>
         ))}
+        <NavLink to="/more"><span aria-hidden="true" style={{ fontSize: 20 }}>☰</span>Yana</NavLink>
       </nav>
     </div>
   );

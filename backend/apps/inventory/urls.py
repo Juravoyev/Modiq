@@ -7,5 +7,6 @@ router.register("stock", views.StockViewSet, basename="stock")
 router.register("movements", views.StockMovementViewSet, basename="movement")
 router.register("receipts", views.ReceiptViewSet, basename="receipt")
 router.register("transfers", views.TransferViewSet, basename="transfer")
+router.register("counts", views.StockCountViewSet, basename="stock-count")
 
 urlpatterns = router.urls

@@ -5,7 +5,7 @@ from apps.accounts.models import Branch
 from apps.catalog.models import ProductVariant
 from apps.common.fields import AllowedBranchPKField, BusinessScopedPKField
 
-from .models import Receipt, ReceiptLine, Stock, StockMovement, Transfer, TransferLine
+from .models import Receipt, ReceiptLine, Stock, StockCount, StockCountLine, StockMovement, Transfer, TransferLine
 
 
 class VariantLabelMixin(serializers.Serializer):
@@ -140,3 +140,36 @@ class TransferSerializer(_LinesMixin, serializers.ModelSerializer):
         if src and dst and src == dst:
             raise serializers.ValidationError({"to_branch": "Qabul qiluvchi filial jo'natuvchidan farq qilishi kerak."})
         return attrs
+
+
+class StockCountLineSerializer(VariantLabelMixin, serializers.ModelSerializer):
+    variant = BusinessScopedPKField(queryset=ProductVariant.objects.all())
+    counted_quantity = serializers.IntegerField(min_value=0)
+
+    class Meta:
+        model = StockCountLine
+        fields = ["id", "variant", "sku", "variant_name", "counted_quantity", "expected_quantity", "difference"]
+        read_only_fields = ["expected_quantity", "difference"]
+
+
+class StockCountSerializer(_LinesMixin, serializers.ModelSerializer):
+    line_model = StockCountLine
+    parent_field = "stock_count"
+
+    branch = AllowedBranchPKField(queryset=Branch.objects.all())
+    branch_name = serializers.CharField(source="branch.name", read_only=True)
+    lines = StockCountLineSerializer(many=True)
+    shortage = serializers.SerializerMethodField(help_text="Kamomad (dona), faqat tasdiqlangandan keyin")
+    surplus = serializers.SerializerMethodField(help_text="Ortiqcha (dona), faqat tasdiqlangandan keyin")
+
+    class Meta:
+        model = StockCount
+        fields = ["id", "branch", "branch_name", "status", "note", "lines", "shortage", "surplus", "created_by",
+                  "applied_by", "applied_at", "created_at"]
+        read_only_fields = ["status", "created_by", "applied_by", "applied_at"]
+
+    def get_shortage(self, obj) -> int:
+        return -sum(line.difference for line in obj.lines.all() if line.difference and line.difference < 0)
+
+    def get_surplus(self, obj) -> int:
+        return sum(line.difference for line in obj.lines.all() if line.difference and line.difference > 0)

@@ -50,10 +50,40 @@ class SaleLine(TimeStampedModel):
     line_total = models.DecimalField(**MONEY)
     unit_cost = models.DecimalField(**MONEY)
     below_cost = models.BooleanField(default=False)
+    # Sotuv paytida amal qilgan chegirma (bo'lsa). unit_price shu chegirmadagi narx.
+    discount = models.ForeignKey("discounts.Discount", null=True, blank=True, on_delete=models.SET_NULL,
+                                 related_name="sale_lines")
 
     class Meta:
         constraints = [
             models.CheckConstraint(condition=Q(quantity__gt=0), name="sale_line_quantity_positive"),
             models.CheckConstraint(condition=Q(discount_amount__gte=0, line_total__gte=0),
                                    name="sale_line_amounts_non_negative"),
+        ]
+
+
+class SaleReturn(BusinessOwnedModel):
+    """Mijoz tovarni qaytardi: qoldiq tiklanadi, tushumdan qaytarilgan summa ayiriladi."""
+
+    sale = models.ForeignKey(Sale, on_delete=models.PROTECT, related_name="returns")
+    branch = models.ForeignKey("accounts.Branch", on_delete=models.PROTECT, related_name="+")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
+    refund_total = models.DecimalField("Qaytarilgan summa", **MONEY)
+    cost_total = models.DecimalField("Qaytgan tovar tannarxi", **MONEY)
+    reason = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [models.Index(fields=["business", "branch", "-created_at"])]
+
+
+class SaleReturnLine(TimeStampedModel):
+    sale_return = models.ForeignKey(SaleReturn, on_delete=models.CASCADE, related_name="lines")
+    sale_line = models.ForeignKey(SaleLine, on_delete=models.PROTECT, related_name="return_lines")
+    quantity = models.PositiveIntegerField()
+    refund_amount = models.DecimalField(**MONEY)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=Q(quantity__gt=0), name="sale_return_line_quantity_positive"),
         ]

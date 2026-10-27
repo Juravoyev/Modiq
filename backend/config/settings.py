@@ -31,7 +31,10 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.catalog",
     "apps.inventory",
+    "apps.discounts",
     "apps.sales",
+    "apps.insights",
+    "apps.reports",
 ]
 
 MIDDLEWARE = [
@@ -122,6 +125,10 @@ SPECTACULAR_SETTINGS = {
 }
 
 CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
+
+# Haftalik xulosa (ixtiyoriy). Kalit bo'lmasa, xulosa tugmasi "sozlanmagan" deb javob beradi.
+GEMINI_API_KEY = env("GEMINI_API_KEY", default="")
+GEMINI_MODEL = env("GEMINI_MODEL", default="gemini-3.8-flash")
 
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

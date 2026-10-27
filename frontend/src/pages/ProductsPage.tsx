@@ -49,7 +49,9 @@ export function ProductsPage() {
                         <td>{p.article}</td>
                         <td className="right num">{money(p.sale_price)}</td>
                         <td className="right num">{p.total_stock}</td>
-                        <td>{p.variants.length}</td>
+                        <td>{p.variants.length}
+                          {isManager && <Link className="btn btn-secondary btn-sm" style={{ marginLeft: 8 }} to={`/products/${p.id}/edit`}
+                                              onClick={(e) => e.stopPropagation()}>Tahrirlash</Link>}</td>
                       </tr>
                       {open === p.id && (
                         <tr>

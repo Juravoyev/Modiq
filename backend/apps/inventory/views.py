@@ -7,8 +7,14 @@ from rest_framework.response import Response
 from apps.common.permissions import IsBusinessMember, IsManagerOrReadOnly
 
 from . import services
-from .models import Receipt, Stock, StockMovement, Transfer
-from .serializers import ReceiptSerializer, StockMovementSerializer, StockSerializer, TransferSerializer
+from .models import Receipt, Stock, StockCount, StockMovement, Transfer
+from .serializers import (
+    ReceiptSerializer,
+    StockCountSerializer,
+    StockMovementSerializer,
+    StockSerializer,
+    TransferSerializer,
+)
 
 MANAGER_WRITE = [permissions.IsAuthenticated, IsBusinessMember, IsManagerOrReadOnly]
 
@@ -109,3 +115,24 @@ class TransferViewSet(_DocumentViewSet):
     def cancel(self, request, pk=None):
         self._require_branch(self.get_object().from_branch)
         return self._run(services.cancel_transfer)
+
+
+class StockCountViewSet(_DocumentViewSet):
+    """Inventarizatsiya. Faqat menejer/egasi yaratadi va tasdiqlaydi."""
+
+    serializer_class = StockCountSerializer
+    queryset = StockCount.objects.none()
+
+    def get_queryset(self):
+        return StockCount.objects.filter(
+            business=self.request.business, branch__in=self.request.membership.allowed_branches()
+        ).select_related("branch").prefetch_related("lines__variant__product", "lines__variant__color",
+                                                    "lines__variant__size")
+
+    @action(detail=True, methods=["post"])
+    def apply(self, request, pk=None):
+        return self._run(services.apply_stock_count)
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        return self._run(services.cancel_stock_count)

@@ -40,7 +40,9 @@ function flatten(value: unknown): string {
 
 function toError(status: number, body: unknown): ApiError {
   if (status === 0) return new ApiError(0, "Server bilan aloqa yo'q. Internetni tekshiring.");
-  if (status >= 500) return new ApiError(status, "Serverda xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring.");
+  // 503 kabi javoblarda server o'zi tushunarli sabab yuborsa, o'shani ko'rsatamiz.
+  const hasDetail = body !== null && typeof body === "object" && "detail" in body;
+  if (status >= 500 && !hasDetail) return new ApiError(status, "Serverda xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring.");
   if (body && typeof body === "object" && !Array.isArray(body)) {
     const obj = body as Record<string, unknown>;
     const fields: Record<string, string> = {};
@@ -93,6 +95,31 @@ export async function api<T>(path: string, options: { method?: string; body?: un
   try { data = text ? JSON.parse(text) : null; } catch { data = null; }
   if (!res.ok) throw toError(res.status, data);
   return data as T;
+}
+
+/** Faylni (masalan, CSV hisobot) token bilan yuklab olib, brauzerda saqlash oynasini ochadi. */
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  const send = () => fetch(`/api${path}`, { headers: tokens.access ? { Authorization: `Bearer ${tokens.access}` } : {} });
+  let res: Response;
+  try {
+    res = await send();
+    if (res.status === 401 && (await refreshAccess())) res = await send();
+  } catch {
+    throw toError(0, null);
+  }
+  if (!res.ok) {
+    let data: unknown = null;
+    try { data = await res.json(); } catch { data = null; }
+    throw toError(res.status, data);
+  }
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 export function qs(params: Record<string, string | number | boolean | undefined | null>): string {

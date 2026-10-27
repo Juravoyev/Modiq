@@ -7,7 +7,10 @@ urlpatterns = [
     path("api/auth/", include("apps.accounts.urls")),
     path("api/catalog/", include("apps.catalog.urls")),
     path("api/inventory/", include("apps.inventory.urls")),
+    path("api/discounts/", include("apps.discounts.urls")),
     path("api/sales/", include("apps.sales.urls")),
+    path("api/insights/", include("apps.insights.urls")),
+    path("api/reports/", include("apps.reports.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="docs"),
 ]

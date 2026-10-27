@@ -22,6 +22,26 @@ python manage.py runserver
 
 API hujjati: http://localhost:8000/api/docs/
 
+Sinash uchun namunaviy do'kon (2 do'kon + ombor, 20 tovar, 90 kunlik savdolar; hammasi o'ylab topilgan):
+
+```bash
+python manage.py seed_demo          # qayta yaratish: --reset (faqat demo do'kon o'chiriladi)
+```
+
+Kirish: egasi `+998900000001`, sotuvchi `+998900000002`, parol `Demo-parol-2026`.
+
+### Haftalik xulosa (ixtiyoriy)
+
+Bosh sahifadagi "Haftalik xulosa" kartasi oxirgi 7 kun raqamlarini tizimning o'zi hisoblaydi, keyin Google Gemini
+shu raqamlardan qisqa matn yozadi. Matn uchun `backend/.env` ga qo'shing (kalitni gitga va frontendga qo'ymang):
+
+```
+GEMINI_API_KEY=...            # https://aistudio.google.com dan
+GEMINI_MODEL=gemini-3.8-flash # ixtiyoriy
+```
+
+Kalit bo'lmasa ham tizim ishlaydi: karta raqamlarni ko'rsatadi va matn "sozlanmagan" deb yozadi.
+
 Docker bilan: `backend/.env` yarating, keyin loyiha ildizida `docker compose up --build`.
 
 ## Frontendni lokal ishga tushirish
@@ -36,7 +56,7 @@ npm run dev
 
 Brauzerda http://localhost:5173 oching. Dev rejimida `/api` so'rovlari avtomatik ravishda Django serveriga yo'naltiriladi.
 
-Sinab ko'rish tartibi: Ro'yxatdan o'tish → Tovarlar → Yangi tovar (rang va o'lcham qo'shing) → Kirim → Kassa → Savdolar / Qoldiq.
+Sinab ko'rish tartibi: demo do'kon bilan kiring yoki ro'yxatdan o'ting → Bosh sahifa → Aqlli tavsiyalar → Chegirmalar → Kassa → Savdolar (qaytarish) → Hisobotlar (CSV, chop etish) → Ko'chirish → Inventarizatsiya → Sozlamalar.
 
 ## Testlar
 

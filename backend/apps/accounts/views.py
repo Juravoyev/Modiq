@@ -9,6 +9,7 @@ from .models import Branch, Membership
 from .serializers import (
     BranchSerializer,
     MemberSerializer,
+    MemberUpdateSerializer,
     MeSerializer,
     PhoneTokenObtainPairSerializer,
     RegisterSerializer,
@@ -47,13 +48,18 @@ class BranchViewSet(BusinessScopedViewSet):
 
 
 class MemberViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.RetrieveModelMixin,
-                    viewsets.GenericViewSet):
+                    mixins.UpdateModelMixin, viewsets.GenericViewSet):
     serializer_class = MemberSerializer
     permission_classes = [permissions.IsAuthenticated, IsBusinessMember, IsManager]
     queryset = Membership.objects.select_related("user").prefetch_related("branches")
 
+    def get_serializer_class(self):
+        if self.action in ("update", "partial_update"):
+            return MemberUpdateSerializer
+        return MemberSerializer
+
     def get_queryset(self):
-        return super().get_queryset().filter(business=self.request.business)
+        return super().get_queryset().filter(business=self.request.business).order_by("id")
 
     def perform_create(self, serializer):
         serializer.save(business=self.request.business)

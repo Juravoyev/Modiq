@@ -90,6 +90,8 @@ class MeSerializer(serializers.ModelSerializer):
 
 
 class MemberSerializer(serializers.ModelSerializer):
+    branch_names = serializers.SerializerMethodField()
+
     """Egasi yangi xodim qo'shadi (menejer yoki sotuvchi)."""
 
     phone = PhoneField(source="user.phone")
@@ -101,7 +103,7 @@ class MemberSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Membership
-        fields = ["id", "phone", "full_name", "password", "role", "branch_ids", "is_active"]
+        fields = ["id", "phone", "full_name", "password", "role", "branch_ids", "branch_names", "is_active"]
 
     def get_fields(self):
         fields = super().get_fields()
@@ -109,6 +111,11 @@ class MemberSerializer(serializers.ModelSerializer):
         if request is not None and hasattr(request, "business"):
             fields["branch_ids"].child_relation.queryset = Branch.objects.filter(business=request.business)
         return fields
+
+    def get_branch_names(self, obj) -> list[str]:
+        if obj.is_manager:
+            return ["Barcha filiallar"]
+        return [b.name for b in obj.branches.all()]
 
     def validate_role(self, value):
         if value == Membership.Role.OWNER:
@@ -131,3 +138,50 @@ class MemberSerializer(serializers.ModelSerializer):
         membership = Membership.objects.create(user=user, **validated)
         membership.branches.set(branches)
         return membership
+
+
+class MemberUpdateSerializer(serializers.ModelSerializer):
+    """Xodim rolini, filiallarini, faolligini va (ixtiyoriy) parolini o'zgartirish."""
+
+    phone = serializers.CharField(source="user.phone", read_only=True)
+    full_name = serializers.CharField(source="user.full_name", required=False, allow_blank=True)
+    password = serializers.CharField(write_only=True, min_length=8, required=False)
+    branch_ids = serializers.PrimaryKeyRelatedField(
+        source="branches", many=True, queryset=Branch.objects.all(), required=False
+    )
+
+    class Meta:
+        model = Membership
+        fields = ["id", "phone", "full_name", "password", "role", "branch_ids", "is_active"]
+
+    def get_fields(self):
+        fields = super().get_fields()
+        request = self.context.get("request")
+        if request is not None and hasattr(request, "business"):
+            fields["branch_ids"].child_relation.queryset = Branch.objects.filter(business=request.business)
+        return fields
+
+    def validate(self, attrs):
+        if self.instance.role == Membership.Role.OWNER:
+            raise serializers.ValidationError({"detail": "Do'kon egasining ma'lumotini bu yerdan o'zgartirib bo'lmaydi."})
+        if attrs.get("role") == Membership.Role.OWNER:
+            raise serializers.ValidationError({"role": "Egalik huquqini bu yerdan berib bo'lmaydi."})
+        return attrs
+
+    @transaction.atomic
+    def update(self, instance, validated):
+        user_data = validated.pop("user", {})
+        password = validated.pop("password", None)
+        branches = validated.pop("branches", None)
+        user = instance.user
+        if "full_name" in user_data:
+            user.full_name = user_data["full_name"]
+        if password:
+            user.set_password(password)
+        if "is_active" in validated:
+            user.is_active = validated["is_active"]
+        user.save()
+        instance = super().update(instance, validated)
+        if branches is not None:
+            instance.branches.set(branches)
+        return instance

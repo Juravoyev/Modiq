@@ -10,7 +10,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
-from .models import Receipt, Stock, StockMovement, Transfer
+from .models import Receipt, Stock, StockCount, StockMovement, Transfer
 
 
 class StockError(ValidationError):
@@ -140,3 +140,40 @@ def cancel_transfer(transfer_id: int, user) -> Transfer:
     transfer.cancelled_at = timezone.now()
     transfer.save(update_fields=["status", "cancelled_at", "updated_at"])
     return transfer
+
+
+@transaction.atomic
+def apply_stock_count(count_id: int, user) -> StockCount:
+    """Har bir sanalgan variant qoldig'ini sanoqqa tenglashtiradi va farqni jurnalga yozadi."""
+    count = StockCount.objects.select_for_update().select_related("branch").get(pk=count_id)
+    if count.status != StockCount.Status.DRAFT:
+        raise StockError({"detail": "Bu inventarizatsiya allaqachon tasdiqlangan yoki bekor qilingan.",
+                          "code": "invalid_status"})
+    lines = _sorted_lines(count)
+    if not lines:
+        raise StockError({"detail": "Inventarizatsiyada birorta ham tovar yo'q.", "code": "empty_document"})
+    for line in lines:
+        stock = _locked_stock(count.business, count.branch, line.variant)
+        diff = line.counted_quantity - stock.quantity
+        line.expected_quantity = stock.quantity
+        line.difference = diff
+        line.save(update_fields=["expected_quantity", "difference", "updated_at"])
+        if diff:
+            change_stock(business=count.business, branch=count.branch, variant=line.variant, delta=diff,
+                         kind=StockMovement.Kind.STOCK_COUNT, user=user, ref=count,
+                         note=f"Tizimda {stock.quantity}, sanoqda {line.counted_quantity}")
+    count.status = StockCount.Status.APPLIED
+    count.applied_by = user
+    count.applied_at = timezone.now()
+    count.save(update_fields=["status", "applied_by", "applied_at", "updated_at"])
+    return count
+
+
+@transaction.atomic
+def cancel_stock_count(count_id: int, user) -> StockCount:
+    count = StockCount.objects.select_for_update().get(pk=count_id)
+    if count.status != StockCount.Status.DRAFT:
+        raise StockError({"detail": "Faqat qoralama inventarizatsiyani bekor qilish mumkin.", "code": "invalid_status"})
+    count.status = StockCount.Status.CANCELLED
+    count.save(update_fields=["status", "updated_at"])
+    return count

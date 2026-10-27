@@ -31,10 +31,12 @@ class StockMovement(BusinessOwnedModel):
     class Kind(models.TextChoices):
         RECEIPT = "receipt", "Kirim"
         SALE = "sale", "Savdo"
+        SALE_RETURN = "sale_return", "Savdo qaytarildi"
         TRANSFER_OUT = "transfer_out", "Ko'chirish (chiqim)"
         TRANSFER_IN = "transfer_in", "Ko'chirish (kirim)"
         TRANSFER_RETURN = "transfer_return", "Ko'chirish bekor qilindi"
         ADJUSTMENT = "adjustment", "Tuzatish"
+        STOCK_COUNT = "stock_count", "Inventarizatsiya"
 
     branch = models.ForeignKey("accounts.Branch", on_delete=models.CASCADE, related_name="+")
     variant = models.ForeignKey("catalog.ProductVariant", on_delete=models.CASCADE, related_name="movements")
@@ -127,4 +129,38 @@ class TransferLine(TimeStampedModel):
         constraints = [
             models.UniqueConstraint(fields=["transfer", "variant"], name="uniq_transfer_line_variant"),
             models.CheckConstraint(condition=Q(quantity__gt=0), name="transfer_line_quantity_positive"),
+        ]
+
+
+class StockCount(BusinessOwnedModel):
+    """Inventarizatsiya: haqiqiy sanoq kiritiladi, tasdiqlanganda qoldiq sanoqqa tenglashtiriladi."""
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Qoralama"
+        APPLIED = "applied", "Tasdiqlangan"
+        CANCELLED = "cancelled", "Bekor qilingan"
+
+    branch = models.ForeignKey("accounts.Branch", on_delete=models.PROTECT, related_name="stock_counts")
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.DRAFT)
+    note = models.CharField(max_length=255, blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
+    applied_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+                                   related_name="+")
+    applied_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+
+class StockCountLine(TimeStampedModel):
+    stock_count = models.ForeignKey(StockCount, on_delete=models.CASCADE, related_name="lines")
+    variant = models.ForeignKey("catalog.ProductVariant", on_delete=models.PROTECT, related_name="+")
+    counted_quantity = models.PositiveIntegerField("Sanalgan")
+    # Tasdiqlash paytida to'ldiriladi: tizimdagi qoldiq va farq.
+    expected_quantity = models.IntegerField(null=True, blank=True)
+    difference = models.IntegerField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["stock_count", "variant"], name="uniq_stock_count_line_variant"),
         ]

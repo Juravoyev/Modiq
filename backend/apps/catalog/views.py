@@ -6,7 +6,6 @@ from rest_framework.response import Response
 
 from apps.common.permissions import IsBusinessMember, IsManagerOrReadOnly
 from apps.common.views import BusinessScopedViewSet
-from apps.inventory.models import Stock
 
 from .models import Brand, Category, Color, Product, ProductVariant, Season, Size
 from .serializers import (
@@ -72,17 +71,15 @@ class ProductViewSet(BusinessScopedViewSet):
     ordering_fields = ["name", "created_at", "sale_price"]
 
     def get_queryset(self):
+        # Qoldiq inventory modulida, lekin catalog uni import qilmaydi: teskari bog'lanish (variant.stocks)
+        # orqali yig'iladi. Shunda modullar bog'liqligi bir tomonlama qoladi: inventory -> catalog.
         branches = _stock_branches(self.request)
         stock_sum = (
-            Stock.objects.filter(variant__product=OuterRef("pk"), branch__in=branches)
-            .values("variant__product").annotate(s=Sum("quantity")).values("s")
-        )
-        variant_stock = (
-            Stock.objects.filter(variant=OuterRef("pk"), branch__in=branches)
-            .values("variant").annotate(s=Sum("quantity")).values("s")
+            ProductVariant.objects.filter(product=OuterRef("pk"))
+            .values("product").annotate(s=Sum("stocks__quantity", filter=Q(stocks__branch__in=branches))).values("s")
         )
         variants = ProductVariant.objects.select_related("color", "size", "product").annotate(
-            stock=Coalesce(Subquery(variant_stock, output_field=IntegerField()), Value(0))
+            stock=Coalesce(Sum("stocks__quantity", filter=Q(stocks__branch__in=branches)), Value(0))
         )
         return (
             super().get_queryset()

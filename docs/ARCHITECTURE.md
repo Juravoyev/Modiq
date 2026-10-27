@@ -1,4 +1,4 @@
-# Modiq arxitekturasi (2-bosqich rejasi)
+# Modiq arxitekturasi
 
 ## 1. Umumiy ko'rinish
 
@@ -15,9 +15,15 @@ Backend modullari (`backend/apps/`):
 | `accounts` | Telefon+parol bilan foydalanuvchi, Business (tenant), Branch (filial), Membership (rol) |
 | `catalog` | Kategoriya, brend, mavsum, rang, o'lcham, Product (model), ProductVariant (rang×o'lcham = SKU) |
 | `inventory` | Stock (filial×variant qoldig'i), StockMovement (jurnal), Receipt (kirim), Transfer (ko'chirish) |
-| `sales` | Sale, SaleLine (kassa) |
+| `sales` | Sale, SaleLine (kassa), SaleReturn (qaytarish) |
+| `insights` | Sotilmay qolish xavfi qoidalari, sotuv sur'ati, sozlanadigan chegaralar (RiskSettings) |
+| `discounts` | Muddatli chegirmalar: qoralama → tasdiq → kassada avtomatik qo'llash, tarix o'chirilmaydi |
+| `reports` | Dashboard, savdo/tovar/qoldiq/xavf hisobotlari, CSV eksport, chegirma natijasi |
 
-Keyingi bosqichlarda: `insights` (sotilmay qolish xavfi), `pricing` (chegirmalar), `reports`.
+Modullar orasidagi bog'liqlik bir tomonlama: `catalog` hech qaysi yuqori modulni import qilmaydi
+(`catalog/tests/test_dependencies.py` tekshiradi). `sales` → `discounts` → `catalog`, `reports` esa
+`sales`, `discounts` va `insights` dan o'qiydi. Chegirma natijasi `reports` da hisoblanadi, aks holda
+`sales` ↔ `discounts` aylana bog'liqligi paydo bo'lardi.
 
 ## 2. Asosiy qarorlar va sabablari
 
@@ -31,6 +37,9 @@ Keyingi bosqichlarda: `insights` (sotilmay qolish xavfi), `pricing` (chegirmalar
 8. **Rollar.** `owner` va `manager` barcha filiallarni ko'radi va katalog/kirim/ko'chirishni boshqaradi. `cashier` faqat biriktirilgan filiallarda ko'radi va sotadi, tannarx va yalpi foydani ko'rmaydi.
 9. **MVP soddaligi.** Bitta foydalanuvchi = bitta biznes (`Membership` OneToOne). Bir nechta biznes kerak bo'lsa, keyin `X-Business` header bilan kengaytiriladi.
 10. **Pul.** `Decimal(14,2)`, valyuta UZS. Float ishlatilmaydi.
+11. **Chegirma narxini server hisoblaydi.** Kassa `/api/discounts/active/` dan narxni faqat ko'rsatish uchun oladi. Savdo yaratilganda server bugungi tasdiqlangan chegirmani o'zi topadi va `SaleLine.discount` ga bog'laydi. Chegirma yaratilganda narx va tannarx nusxalanadi, tannarxdan past chegirmani faqat menejer/egasi `allow_below_cost` bilan tasdiqlaydi. Bir variantga bir vaqtda ikkita tasdiqlangan chegirma bo'lmaydi.
+12. **Hisobotlar bir xil shaklda.** `{title, date_from, date_to, columns, rows, totals, formulas}`. Frontend bitta jadval komponenti bilan hammasini ko'rsatadi, `?export=csv` xuddi shu ma'lumotni CSV qilib beradi. PDF uchun alohida kutubxona ishlatilmaydi: brauzerning chop etish oynasi (print CSS) orqali PDF saqlanadi.
+13. **Til modeli faqat matn yozadi.** Haftalik xulosada barcha raqamlar `reports/summary.py::weekly_facts` da bazadan hisoblanadi. Gemini'ga faqat shu JSON yuboriladi va undan yangi raqam yoki prognoz o'ylab topmaslik so'raladi. Kalit faqat backend `.env` da, so'rov `x-goog-api-key` sarlavhasi bilan standart `urllib` orqali yuboriladi (qo'shimcha kutubxona yo'q). Kalit bo'lmasa yoki xizmat javob bermasa, sahifa raqamlarni baribir ko'rsatadi.
 
 ## 3. API (hozir mavjud)
 
@@ -52,17 +61,30 @@ Hujjat: `/api/docs/` (Swagger), sxema: `/api/schema/`.
 | `/api/inventory/receipts/` + `/confirm/`, `/cancel/` | Kirim |
 | `/api/inventory/transfers/` + `/send/`, `/receive/`, `/cancel/` | Ko'chirish |
 | `/api/sales/` | `POST` savdoni yakunlash, `GET` tarix |
+| `POST /api/sales/{id}/return/` | Tovarni qaytarish (qoldiq tiklanadi, summa proporsional qaytariladi) |
+| `/api/inventory/counts/` + `/apply/`, `/cancel/` | Inventarizatsiya: sanoq kiritiladi, tasdiqlanganda qoldiq tenglashtiriladi |
+| `PATCH /api/auth/members/{id}/` | Xodim roli, filiallari, faolligi, paroli |
+| `GET /api/insights/risks/?branch=&type=&level=` | Xavfli variantlar, har birida `reason` va `action` |
+| `GET/PATCH /api/insights/settings/` | Xavf qoidalari chegaralari |
+| `GET /api/reports/dashboard/?branch=` | Bugungi tushum, savdolar, qoldiq, kam qolganlar, ogohlantirishlar, `formulas` |
+| `/api/discounts/?state=` + `/approve/`, `/cancel/` | Chegirmalar (menejer/egasi). `state`: active, scheduled, draft, finished, cancelled |
+| `GET /api/discounts/active/` | Bugun amaldagi chegirma narxlari (kassa uchun, tannarxsiz) |
+| `GET /api/reports/{sales,products,stock,slow,seasonal}/?branch=&date_from=&date_to=&group=` | Hisobotlar; `&export=csv` bilan CSV fayl |
+| `GET /api/reports/discounts/{id}/results/` | Chegirma davri va undan oldingi teng davr sotuvi |
+| `GET/POST /api/reports/weekly-summary/?branch=` | Haftalik faktlar (GET) va ular asosidagi qisqa matn (POST, 1 soat keshlanadi) |
 
 ## 4. Implementatsiya ketma-ketligi
 
 1. ✅ Backend yadrosi: auth, filiallar, katalog, kirim, qoldiq, ko'chirish, savdo + testlar.
 2. ✅ Frontend skeleti: Vite + React + TS, login/ro'yxatdan o'tish, layout (desktop yon menyu, mobil pastki menyu), Kassa, Tovarlar, Kirim, Qoldiq, Savdolar.
-3. ⏭ Ko'chirish sahifasi, xodimlar va filiallar sahifasi, tovarni tahrirlash.
-4. Qoldiqni tekshirish (inventarizatsiya tuzatishi), savdoni qaytarish.
-5. Aqlli tavsiyalar: sotilmay qolish xavfi qoidalari + "Nega bu tavsiya berildi?" izohi, sozlanadigan chegaralar.
-6. Chegirma boshqaruvi (muddatli, tasdiqlash bilan, tarix).
-7. Dashboard va hisobotlar (CSV/PDF), "taxminiy yalpi foyda" (sof foyda emas).
-8. Production: Nginx, HTTPS, backup, CI.
+3. ✅ Ko'chirish sahifasi, xodimlar va filiallar (Sozlamalar), tovarni tahrirlash.
+4. ✅ Inventarizatsiya, savdoni qaytarish.
+5. ✅ Aqlli tavsiyalar: 4 qoida + "Nega bu tavsiya berildi?" izohi, sozlanadigan chegaralar.
+6. ✅ Dashboard (formulalar bilan). Namunaviy ma'lumot: `python manage.py seed_demo`.
+7. ✅ Chegirma boshqaruvi (muddatli, tasdiqlash bilan, tarix, natijani kuzatish).
+8. ✅ Hisobotlar: kunlik/haftalik/oylik savdo, mahsulotlar bo'yicha, qoldiq, kam sotiladigan, mavsumiy; CSV, PDF (chop etish orqali).
+9. Production (oxirida): Nginx, HTTPS, backup, CI.
+10. ✅ Til modeli bilan haftalik xulosa (faqat backend orqali). Ixtiyoriy keyingi qadam: nakladnoy rasmini o'qish.
 
 ## 5. Test rejasi (talab 7-bo'lim)
 
@@ -74,8 +96,15 @@ Hujjat: `/api/docs/` (Swagger), sxema: `/api/schema/`.
 | 4 | Kirim takroran qo'llanmaydi | ✅ `inventory/tests` |
 | 5 | Ko'chirish to'g'ri ishlaydi (ikki marta jo'natish/qabul yo'q, bekor qilish qaytaradi) | ✅ |
 | 6 | Bir biznes boshqasining ma'lumotini ko'ra/ishlata olmaydi | ✅ `TenantIsolationTests` |
-| 7 | Chegirma va narx hisob-kitobi, tannarxdan past narx | ✅ |
-| 8 | Hisobotlar haqiqiy ma'lumotlarga mos | ⏭ hisobotlar bosqichida |
+| 7 | Chegirma va narx hisob-kitobi, tannarxdan past narx | ✅ `sales/tests`, `discounts/tests` |
+| 8 | Dashboard va hisobot raqamlari haqiqiy savdo va qaytarishlarga mos, CSV | ✅ `reports/tests` |
+| 9 | Qaytarish: sotilganidan ko'p qaytarib bo'lmaydi, summa proporsional | ✅ `sales/tests/test_returns.py` |
+| 10 | Inventarizatsiya ikki marta qo'llanmaydi, farq jurnalga yoziladi | ✅ `inventory/tests/test_stock_count.py` |
+| 11 | Xavf qoidalari: chegara, sozlash, ma'lumot yetarli bo'lmaganda sur'at yo'q | ✅ `insights/tests` |
+| 12 | Demo ma'lumotda qoldiq = jurnal yig'indisi | ✅ `accounts/tests/test_seed_demo.py` |
+| 13 | Chegirma: ustma-ust tushmaydi, muddati o'tgani qo'llanmaydi, kassir tasdiqlay olmaydi | ✅ `discounts/tests` |
+| 14 | Katalog yuqori modullarga bog'liq emas | ✅ `catalog/tests/test_dependencies.py` |
+| 15 | Haftalik xulosa: faktlar haqiqiy savdodan, kalitsiz/xatoda tushunarli javob, kalit URL da emas | ✅ `reports/tests/test_summary.py` |
 
 ## 6. Frontend tuzilishi (`frontend/src/`)
 
@@ -94,3 +123,16 @@ Ma'lum cheklovlar (texnik qarz):
 * JWT `localStorage` da saqlanadi. Production'dan oldin httpOnly cookie'ga o'tkazishni ko'rib chiqish kerak.
 * PWA hozircha faqat manifest bilan, offline ishlash (service worker) yo'q.
 * Frontend uchun avtomatik testlar hali yo'q (qo'lda va Playwright skript bilan tekshirilgan).
+
+## 7. Aqlli tavsiyalar qoidalari (`apps/insights/engine.py`)
+
+Har bir do'kon filiali va variant uchun (omborlar savdo qilmagani uchun tahlil qilinmaydi, lekin ko'chirish tavsiyasida qatnashadi):
+
+| Qoida | Shart | Daraja |
+|---|---|---|
+| Sotilmay qolish | Qoldiq > 0 va oxirgi sotuvdan (sotilmagan bo'lsa, tovar kelgan kundan) beri ≥ `no_sale_days` kun | 2× chegaradan oshsa yuqori, aks holda o'rta |
+| Ortiqcha zaxira | Sur'at ishonchli (davrda ≥ `min_sales_for_velocity` dona) va qoldiq / sur'at > `overstock_cover_days` | 2× chegaradan oshsa yuqori |
+| Mavsumiy | Mavsum tugashiga ≤ `season_warning_days` kun va kutilgan sotuvdan ko'p qoldiq qoladi; mavsum tugagan va sotuv to'xtagan bo'lsa past | qoldiqning yarmidan ko'pi qolsa yuqori |
+| Qayta to'ldirish | Qoldiq ≤ minimal va davrda sotuv bo'lgan; boshqa filialda ortiqcha bo'lsa, ko'chirish taklif qilinadi | tugagan bo'lsa yuqori |
+
+Sotuv sur'ati = davrdagi sof sotuv (qaytarishlarsiz) / davr kunlari. Ma'lumot yetarli bo'lmasa "ma'lumot yetarli emas" deb ko'rsatiladi.

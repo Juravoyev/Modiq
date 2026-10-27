@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
 import { api, ApiError, qs } from "../api/client";
-import type { Page, PaymentType, Sale, Variant } from "../api/types";
+import type { ActiveDiscount, Page, PaymentType, Sale, Variant } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
 import { Receipt } from "../components/Receipt";
 import { Empty, ErrorBox, Loading } from "../components/ui";
@@ -30,6 +30,10 @@ export function PosPage() {
   const [belowCostConfirmed, setBelowCostConfirmed] = useState(false);
   const [done, setDone] = useState<Sale | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  // Bugungi tasdiqlangan chegirmalar. Yakuniy narxni baribir server hisoblaydi, bu faqat ko'rsatish uchun.
+  const promos = useAsync(() => api<ActiveDiscount[]>("/discounts/active/"), [done]);
+  const promoOf = (v: Variant) => promos.data?.find((d) => d.variant === v.id);
+  const priceOf = (v: Variant) => Number(promoOf(v)?.price_after ?? v.effective_sale_price);
 
   const results = useAsync(
     () => search
@@ -77,14 +81,14 @@ export function PosPage() {
     let discount = 0;
     const invalid: string[] = [];
     for (const l of cart) {
-      const gross = Number(l.variant.effective_sale_price) * l.quantity;
+      const gross = priceOf(l.variant) * l.quantity;
       const d = Number(l.discount || 0);
       if (d > gross) invalid.push(l.variant.sku);
       subtotal += gross;
       discount += d;
     }
     return { subtotal, discount, total: subtotal - discount, invalid };
-  }, [cart]);
+  }, [cart, promos.data]);
 
   async function complete() {
     if (!branch || cart.length === 0) return;
@@ -150,6 +154,7 @@ export function PosPage() {
           <div className="stack" style={{ gap: 8 }}>
             {results.data.results.map((v) => {
               const stock = v.stock ?? 0;
+              const promo = promoOf(v);
               return (
                 <button key={v.id} className="result-item" onClick={() => add(v)} disabled={stock <= 0}>
                   <div>
@@ -157,7 +162,11 @@ export function PosPage() {
                     <div className="muted">{v.color_name} · {v.size_name} · {v.sku}</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div className="num" style={{ fontWeight: 600 }}>{money(v.effective_sale_price)}</div>
+                    {promo && <div className="muted num" style={{ textDecoration: "line-through" }}>{money(promo.price_before)}</div>}
+                    <div className="num" style={{ fontWeight: 600 }}>
+                      {promo && <span className="badge badge-warn" style={{ marginRight: 6 }}>Chegirma</span>}
+                      {money(priceOf(v))}
+                    </div>
                     <div className={stock > 0 ? "muted" : "field-error"}>{stock > 0 ? `${stock} dona` : "Qoldiqda yo'q"}</div>
                   </div>
                 </button>
@@ -177,14 +186,16 @@ export function PosPage() {
         ) : (
           <div>
             {cart.map((l) => {
-              const gross = Number(l.variant.effective_sale_price) * l.quantity;
+              const gross = priceOf(l.variant) * l.quantity;
               const bad = Number(l.discount || 0) > gross;
+              const promo = promoOf(l.variant);
               return (
                 <div key={l.variant.id} className="cart-line stack" style={{ gap: 6 }}>
                   <div className="spread">
                     <div>
                       <div style={{ fontWeight: 600 }}>{l.variant.product_name}</div>
                       <div className="muted">{l.variant.color_name} · {l.variant.size_name}</div>
+                      {promo && <div className="muted">Chegirma narxi: {money(promo.price_after)} ({promo.ends_on} gacha)</div>}
                     </div>
                     <button className="btn btn-secondary btn-sm" aria-label="O'chirish"
                             onClick={() => changeCart(cart.filter((x) => x.variant.id !== l.variant.id))}>✕</button>

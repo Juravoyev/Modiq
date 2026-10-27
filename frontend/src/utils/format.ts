@@ -23,3 +23,9 @@ export function newIdempotencyKey(): string {
   const h = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
+
+/** Toshkent vaqti bo'yicha sana "YYYY-MM-DD" (input type="date" uchun). days — necha kun keyin. */
+export function isoDate(days = 0): string {
+  const d = new Date(Date.now() + days * 86400000);
+  return d.toLocaleDateString("sv-SE", { timeZone: "Asia/Tashkent" });
+}
