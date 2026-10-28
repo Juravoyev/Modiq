@@ -2,6 +2,7 @@ from django.db import transaction
 from rest_framework import serializers
 
 from apps.common.fields import BusinessScopedPKField
+from apps.common.serializers import HideCostFieldsMixin
 
 from .models import Brand, Category, Color, Product, ProductVariant, Season, Size
 from .services import generate_variants
@@ -49,7 +50,9 @@ class SizeSerializer(UniqueNamePerBusinessMixin, serializers.ModelSerializer):
         fields = ["id", "name", "sort_order"]
 
 
-class VariantSerializer(serializers.ModelSerializer):
+class VariantSerializer(HideCostFieldsMixin, serializers.ModelSerializer):
+    cost_fields = ("purchase_price", "effective_purchase_price")
+
     product_name = serializers.CharField(source="product.name", read_only=True)
     color_name = serializers.CharField(source="color.name", read_only=True)
     size_name = serializers.CharField(source="size.name", read_only=True)
@@ -77,7 +80,9 @@ class VariantSerializer(serializers.ModelSerializer):
         return value
 
 
-class ProductSerializer(serializers.ModelSerializer):
+class ProductSerializer(HideCostFieldsMixin, serializers.ModelSerializer):
+    cost_fields = ("purchase_price",)
+
     category = BusinessScopedPKField(queryset=Category.objects.all(), allow_null=True, required=False)
     brand = BusinessScopedPKField(queryset=Brand.objects.all(), allow_null=True, required=False)
     season = BusinessScopedPKField(queryset=Season.objects.all(), allow_null=True, required=False)

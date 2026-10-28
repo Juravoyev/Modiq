@@ -4,7 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
-from apps.common.permissions import IsBusinessMember, IsManagerOrReadOnly
+from apps.common.permissions import IsBusinessMember, IsManager, IsManagerOrReadOnly
 
 from . import services
 from .models import Receipt, Stock, StockMovement, Transfer
@@ -61,6 +61,8 @@ class _DocumentViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixin
 
 
 class ReceiptViewSet(_DocumentViewSet):
+    # Kirim hujjati xarid narxlaridan iborat, kassir uni ko'rmaydi.
+    permission_classes = [permissions.IsAuthenticated, IsBusinessMember, IsManager]
     serializer_class = ReceiptSerializer
     queryset = Receipt.objects.none()
 

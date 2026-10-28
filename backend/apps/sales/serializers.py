@@ -8,7 +8,7 @@ from .models import Sale, SaleLine
 
 
 class SaleLineInputSerializer(serializers.Serializer):
-    variant = BusinessScopedPKField(queryset=ProductVariant.objects.filter(is_active=True)
+    variant = BusinessScopedPKField(queryset=ProductVariant.objects.filter(is_active=True, product__is_active=True)
                                     .select_related("product", "color", "size"))
     quantity = serializers.IntegerField(min_value=1, max_value=10000)
     discount_amount = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=0, default=0)

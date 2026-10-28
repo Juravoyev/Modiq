@@ -13,6 +13,11 @@ import { RegisterPage } from "./pages/RegisterPage";
 import { SalesPage } from "./pages/SalesPage";
 import { StockPage } from "./pages/StockPage";
 
+function RequireManager({ children }: { children: ReactNode }) {
+  const { isManager } = useAuth();
+  return isManager ? <>{children}</> : <Navigate to="/" replace />;
+}
+
 function RequireAuth({ children }: { children: ReactNode }) {
   const { me, loading } = useAuth();
   if (loading) return <Loading />;
@@ -29,8 +34,8 @@ export default function App() {
           <Route element={<RequireAuth><Layout /></RequireAuth>}>
             <Route index element={<PosPage />} />
             <Route path="products" element={<ProductsPage />} />
-            <Route path="products/new" element={<ProductFormPage />} />
-            <Route path="receipts" element={<ReceiptsPage />} />
+            <Route path="products/new" element={<RequireManager><ProductFormPage /></RequireManager>} />
+            <Route path="receipts" element={<RequireManager><ReceiptsPage /></RequireManager>} />
             <Route path="stock" element={<StockPage />} />
             <Route path="sales" element={<SalesPage />} />
           </Route>

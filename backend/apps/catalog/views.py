@@ -1,6 +1,7 @@
 from django.db.models import IntegerField, OuterRef, Prefetch, Q, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
-from rest_framework import permissions
+from django_filters import rest_framework as filters
+from rest_framework import permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -19,9 +20,28 @@ from .serializers import (
     SizeSerializer,
     VariantSerializer,
 )
-from .services import generate_variants
+from .services import delete_or_archive_product, delete_or_archive_variant, generate_variants
 
 MANAGER_WRITE = [permissions.IsAuthenticated, IsBusinessMember, IsManagerOrReadOnly]
+
+
+def _destroy_response(archived: bool) -> Response:
+    if archived:
+        return Response({"archived": True, "detail": "Tarixi bor, shuning uchun o'chirilmadi, arxivlandi."})
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class VariantFilter(filters.FilterSet):
+    # Variant faqat o'zi ham, tovari ham faol bo'lsa sotiladi (tovar arxivlansa variantlari ham yashiriladi).
+    is_active = filters.BooleanFilter(method="filter_active")
+
+    class Meta:
+        model = ProductVariant
+        fields = ["product", "color", "size"]
+
+    def filter_active(self, queryset, name, value):
+        active = Q(is_active=True, product__is_active=True)
+        return queryset.filter(active) if value else queryset.exclude(active)
 
 
 def _stock_branches(request):
@@ -99,6 +119,9 @@ class ProductViewSet(BusinessScopedViewSet):
         created = generate_variants(product, s.validated_data["color_ids"], s.validated_data["size_ids"])
         return Response({"created": len(created)}, status=201)
 
+    def destroy(self, request, *args, **kwargs):
+        return _destroy_response(delete_or_archive_product(self.get_object()))
+
 
 class VariantViewSet(BusinessScopedViewSet):
     """Variantlar: kassada SKU, shtrix-kod yoki nom bo'yicha qidirish uchun."""
@@ -107,7 +130,7 @@ class VariantViewSet(BusinessScopedViewSet):
     serializer_class = VariantSerializer
     queryset = ProductVariant.objects.select_related("product", "color", "size")
     search_fields = ["sku", "barcode", "product__name", "product__article"]
-    filterset_fields = ["product", "color", "size", "is_active"]
+    filterset_class = VariantFilter
     http_method_names = ["get", "patch", "delete", "head", "options"]
 
     def get_queryset(self):
@@ -115,3 +138,6 @@ class VariantViewSet(BusinessScopedViewSet):
         return super().get_queryset().annotate(
             stock=Coalesce(Sum("stocks__quantity", filter=Q(stocks__branch__in=branches)), Value(0))
         )
+
+    def destroy(self, request, *args, **kwargs):
+        return _destroy_response(delete_or_archive_variant(self.get_object()))

@@ -27,11 +27,12 @@ export interface Variant {
   size_name: string;
   sku: string;
   barcode: string;
-  purchase_price: string | null;
+  // Tannarx maydonlari faqat egasi va menejerga keladi, kassirda bo'lmaydi.
+  purchase_price?: string | null;
   sale_price: string | null;
   min_stock: number | null;
   is_active: boolean;
-  effective_purchase_price: string;
+  effective_purchase_price?: string;
   effective_sale_price: string;
   effective_min_stock: number;
   stock: number | null;
@@ -44,7 +45,7 @@ export interface Product {
   category: number | null;
   brand: number | null;
   season: number | null;
-  purchase_price: string;
+  purchase_price?: string;
   sale_price: string;
   min_stock: number;
   image: string | null;

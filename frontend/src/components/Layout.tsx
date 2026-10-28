@@ -6,20 +6,21 @@ import { Logo } from "./Logo";
 const NAV = [
   { to: "/", label: "Kassa", icon: "🧾", end: true },
   { to: "/products", label: "Tovarlar", icon: "👕" },
-  { to: "/receipts", label: "Kirim", icon: "📥" },
+  { to: "/receipts", label: "Kirim", icon: "📥", managerOnly: true },
   { to: "/stock", label: "Qoldiq", icon: "📦" },
   { to: "/sales", label: "Savdolar", icon: "📈" },
 ];
 
 export function Layout() {
-  const { me, branch, setBranchId, logout } = useAuth();
+  const { me, branch, setBranchId, logout, isManager } = useAuth();
   const branches = me?.branches ?? [];
+  const nav = NAV.filter((n) => isManager || !n.managerOnly);
 
   return (
     <div className="app">
       <aside className="sidebar">
         <div className="brand"><Logo /> Modiq</div>
-        {NAV.map((n) => (
+        {nav.map((n) => (
           <NavLink key={n.to} to={n.to} end={n.end} className="nav-link">
             <span aria-hidden="true">{n.icon}</span> {n.label}
           </NavLink>
@@ -55,7 +56,7 @@ export function Layout() {
       </div>
 
       <nav className="bottom-nav" aria-label="Asosiy menyu">
-        {NAV.map((n) => (
+        {nav.map((n) => (
           <NavLink key={n.to} to={n.to} end={n.end}>
             <span aria-hidden="true" style={{ fontSize: 20 }}>{n.icon}</span>
             {n.label}
