@@ -21,6 +21,7 @@ export interface Variant {
   id: number;
   product: number;
   product_name: string;
+  product_image: string | null;
   color: number;
   color_name: string;
   size: number;

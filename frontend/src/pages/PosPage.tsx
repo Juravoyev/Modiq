@@ -4,7 +4,7 @@ import { api, ApiError, qs } from "../api/client";
 import type { Page, PaymentType, Sale, Variant } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
 import { Receipt } from "../components/Receipt";
-import { Empty, ErrorBox, Loading } from "../components/ui";
+import { Empty, ErrorBox, Loading, ProductThumb } from "../components/ui";
 import { money, newIdempotencyKey } from "../utils/format";
 import { useAsync, useDebounced } from "../utils/useAsync";
 
@@ -152,9 +152,12 @@ export function PosPage() {
               const stock = v.stock ?? 0;
               return (
                 <button key={v.id} className="result-item" onClick={() => add(v)} disabled={stock <= 0}>
-                  <div>
+                  <div className="row" style={{ gap: 10, flexWrap: "nowrap", textAlign: "left" }}>
+                    <ProductThumb src={v.product_image} size={44} />
+                    <div>
                     <div style={{ fontWeight: 600 }}>{v.product_name}</div>
                     <div className="muted">{v.color_name} · {v.size_name} · {v.sku}</div>
+                    </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div className="num" style={{ fontWeight: 600 }}>{money(v.effective_sale_price)}</div>

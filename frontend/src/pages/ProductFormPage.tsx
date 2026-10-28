@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import { api, ApiError } from "../api/client";
 import type { Color, NamedRef, Page, Product, Size } from "../api/types";
+import { ImagePicker } from "../components/ImagePicker";
 import { ErrorBox, Field, Loading } from "../components/ui";
 import { useAsync } from "../utils/useAsync";
 
@@ -62,6 +63,7 @@ export function ProductFormPage() {
   const [form, setForm] = useState({ name: "", article: "", purchase_price: "", sale_price: "", min_stock: "1", category: "", brand: "", season: "" });
   const [colorIds, setColorIds] = useState<number[]>([]);
   const [sizeIds, setSizeIds] = useState<number[]>([]);
+  const [image, setImage] = useState<File | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -83,7 +85,7 @@ export function ProductFormPage() {
     setError(null);
     setFields({});
     try {
-      await api<Product>("/catalog/products/", {
+      const product = await api<Product>("/catalog/products/", {
         method: "POST",
         body: {
           name: form.name, article: form.article, purchase_price: form.purchase_price, sale_price: form.sale_price,
@@ -94,7 +96,18 @@ export function ProductFormPage() {
           color_ids: colorIds, size_ids: sizeIds,
         },
       });
-      navigate("/products");
+      let notice: string | undefined;
+      if (image) {
+        const fd = new FormData();
+        fd.append("image", image);
+        try {
+          await api(`/catalog/products/${product.id}/image/`, { method: "POST", body: fd });
+        } catch (err) {
+          // Tovar allaqachon saqlangan: qayta yuborish artikul takrorlanishi xatosini beradi, shuning uchun ro'yxatga o'tamiz.
+          notice = `Tovar saqlandi, lekin rasm yuklanmadi: ${(err as Error).message} Rasmni tovarlar ro'yxatidan qayta yuklang.`;
+        }
+      }
+      navigate("/products", { state: notice ? { notice } : undefined });
     } catch (err) {
       setError((err as Error).message);
       if (err instanceof ApiError) setFields(err.fields);
@@ -150,6 +163,9 @@ export function ProductFormPage() {
           </Field>
         </div>
         <QuickAdd placeholder="Yangi kategoriya" onAdd={(n) => addRef("categories", n)} />
+        <Field label="Rasm" hint="Rasm avtomatik kichraytirilib siqiladi">
+          <ImagePicker current={null} onPick={setImage} onRemove={() => setImage(null)} />
+        </Field>
         {belowCost && <div className="alert alert-warn"><span aria-hidden="true">▲</span> Sotuv narxi xarid narxidan past.</div>}
       </div>
 

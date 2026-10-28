@@ -72,9 +72,12 @@ export async function api<T>(path: string, options: { method?: string; body?: un
   const { method = "GET", body, auth = true } = options;
   const send = () => {
     const headers: Record<string, string> = { Accept: "application/json" };
-    if (body !== undefined) headers["Content-Type"] = "application/json";
+    // FormData (fayl yuklash) uchun Content-Type ni brauzer o'zi qo'yadi (multipart boundary bilan).
+    const isForm = body instanceof FormData;
+    if (body !== undefined && !isForm) headers["Content-Type"] = "application/json";
     if (auth && tokens.access) headers.Authorization = `Bearer ${tokens.access}`;
-    return fetch(`/api${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+    const payload = body === undefined ? undefined : isForm ? body : JSON.stringify(body);
+    return fetch(`/api${path}`, { method, headers, body: payload });
   };
 
   let res: Response;

@@ -3,6 +3,7 @@ from django.db.models.functions import Coalesce
 from django_filters import rest_framework as filters
 from rest_framework import permissions, status
 from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
 from apps.common.permissions import IsBusinessMember, IsManagerOrReadOnly
@@ -15,12 +16,19 @@ from .serializers import (
     CategorySerializer,
     ColorSerializer,
     GenerateVariantsSerializer,
+    ProductImageSerializer,
     ProductSerializer,
     SeasonSerializer,
     SizeSerializer,
     VariantSerializer,
 )
-from .services import delete_or_archive_product, delete_or_archive_variant, generate_variants
+from .services import (
+    delete_or_archive_product,
+    delete_or_archive_variant,
+    generate_variants,
+    remove_product_image,
+    set_product_image,
+)
 
 MANAGER_WRITE = [permissions.IsAuthenticated, IsBusinessMember, IsManagerOrReadOnly]
 
@@ -118,6 +126,19 @@ class ProductViewSet(BusinessScopedViewSet):
         s.is_valid(raise_exception=True)
         created = generate_variants(product, s.validated_data["color_ids"], s.validated_data["size_ids"])
         return Response({"created": len(created)}, status=201)
+
+    @action(detail=True, methods=["post", "delete"], parser_classes=[MultiPartParser],
+            serializer_class=ProductImageSerializer)
+    def image(self, request, pk=None):
+        """POST: rasmni yuklash yoki almashtirish (multipart, maydon nomi `image`). DELETE: rasmni olib tashlash."""
+        product = self.get_object()
+        if request.method == "DELETE":
+            remove_product_image(product)
+        else:
+            s = ProductImageSerializer(data=request.data)
+            s.is_valid(raise_exception=True)
+            set_product_image(product, s.validated_data["image"])
+        return Response(ProductSerializer(self.get_queryset().get(pk=product.pk), context={"request": request}).data)
 
     def destroy(self, request, *args, **kwargs):
         return _destroy_response(delete_or_archive_product(self.get_object()))

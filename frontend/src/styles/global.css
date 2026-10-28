@@ -161,3 +161,8 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
   .content { padding: 0; }
   .card { border: none; box-shadow: none; }
 }
+
+/* Tovar rasmi */
+.thumb { display: inline-flex; flex: none; border-radius: 8px; object-fit: cover; background: var(--bg); border: 1px solid var(--border); }
+.thumb-empty { align-items: center; justify-content: center; font-size: 18px; opacity: 0.6; }
+.image-picker { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }

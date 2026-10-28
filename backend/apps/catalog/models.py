@@ -1,3 +1,5 @@
+import uuid
+
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
@@ -9,6 +11,11 @@ MONEY = {"max_digits": 14, "decimal_places": 2}
 
 def _unique_name(model_name):
     return models.UniqueConstraint(fields=["business", "name"], name=f"uniq_{model_name}_name_per_business")
+
+
+def product_image_path(instance, filename):
+    # Har bir yuklashda yangi nom: brauzer keshi eski rasmni ko'rsatib qolmaydi.
+    return f"products/{instance.business_id}/{uuid.uuid4().hex}.webp"
 
 
 class Category(BusinessOwnedModel):
@@ -91,7 +98,7 @@ class Product(BusinessOwnedModel):
     purchase_price = models.DecimalField("Xarid narxi", **MONEY)
     sale_price = models.DecimalField("Sotuv narxi", **MONEY)
     min_stock = models.PositiveIntegerField("Minimal qoldiq (har bir variant uchun)", default=0)
-    image = models.ImageField(upload_to="products/", null=True, blank=True)
+    image = models.ImageField(upload_to=product_image_path, null=True, blank=True)
     is_active = models.BooleanField(default=True)
 
     class Meta:

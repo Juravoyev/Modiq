@@ -46,6 +46,7 @@ Hujjat: `/api/docs/` (Swagger), sxema: `/api/schema/`.
 | `/api/catalog/{categories,brands,seasons,colors,sizes}/` | Ma'lumotnomalar |
 | `/api/catalog/products/` | Tovarlar; `color_ids`+`size_ids` bilan variantlar matritsasi yaratiladi; `total_stock` |
 | `POST /api/catalog/products/{id}/generate-variants/` | Yangi rang/o'lcham qo'shish |
+| `POST`/`DELETE /api/catalog/products/{id}/image/` | Tovar rasmi (multipart). WebP, eng katta tomoni 1200px gacha siqiladi |
 | `/api/catalog/variants/?search=` | Kassa qidiruvi (SKU, shtrix-kod, nom), `stock` bilan |
 | `GET /api/inventory/stock/?branch=&low=true` | Qoldiqlar, kam qolganlar |
 | `GET /api/inventory/movements/` | Ombor harakatlari tarixi |

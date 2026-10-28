@@ -73,3 +73,10 @@ export function StockBadge({ quantity, min }: { quantity: number; min: number })
   if (quantity <= min) return <span className="badge badge-warn">▲ Kam qolgan</span>;
   return <span className="badge badge-ok">● Yetarli</span>;
 }
+
+/** Tovar rasmi; rasm bo'lmasa, neytral belgi. */
+export function ProductThumb({ src, size = 40, alt = "" }: { src: string | null | undefined; size?: number; alt?: string }) {
+  return src
+    ? <img className="thumb" src={src} alt={alt} width={size} height={size} loading="lazy" />
+    : <span className="thumb thumb-empty" style={{ width: size, height: size }} aria-hidden="true">👕</span>;
+}
