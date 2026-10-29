@@ -38,6 +38,18 @@ Brauzerda http://localhost:5173 oching. Dev rejimida `/api` so'rovlari avtomatik
 
 Sinab ko'rish tartibi: Ro'yxatdan o'tish → Tovarlar → Yangi tovar (rang va o'lcham qo'shing) → Kirim → Kassa → Savdolar / Qoldiq.
 
+## Demo ma'lumotlar
+
+Taqdimot uchun tayyor do'kon (3 filial, 4 xodim, 10 tovar, 30 kunlik savdo, qaytarishlar):
+
+```bash
+cd backend
+python manage.py seed_demo          # qayta yaratish: seed_demo --reset
+```
+
+Kirish: `+998 90 000 00 01` (egasi), `...02` (menejer), `...03` va `...04` (sotuvchilar), parol `Demo-12345`.
+Taqdimot ssenariysi: [docs/DEMO.md](docs/DEMO.md).
+
 ## Testlar
 
 ```bash
