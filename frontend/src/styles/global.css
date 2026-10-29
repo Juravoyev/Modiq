@@ -166,3 +166,19 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .thumb { display: inline-flex; flex: none; border-radius: 8px; object-fit: cover; background: var(--bg); border: 1px solid var(--border); }
 .thumb-empty { align-items: center; justify-content: center; font-size: 18px; opacity: 0.6; }
 .image-picker { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+/* Hisobot: ko'rsatkich kartochkalari va kunlik tushum grafigi */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.tile { display: flex; flex-direction: column; gap: 4px; }
+.tile-value { font-size: 22px; font-weight: 700; color: var(--green-dark); }
+.tile-warn { color: #92400e; }
+.chart { display: flex; flex-direction: column; gap: 6px; }
+.chart-tooltip { font-size: 14px; min-height: 20px; }
+.chart-plot { position: relative; height: 180px; display: flex; align-items: flex-end; gap: 2px; border-bottom: 1px solid var(--border); margin-left: 0; }
+.chart-gridline { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--border); pointer-events: none; }
+.chart-gridline span { position: absolute; right: 0; top: -16px; font-size: 11px; color: var(--muted); background: var(--white); padding-left: 4px; }
+.chart-col { flex: 1; height: 100%; display: flex; align-items: flex-end; cursor: pointer; min-width: 0; }
+.chart-bar { width: 100%; max-width: 28px; margin: 0 auto; background: var(--green); border-radius: 4px 4px 0 0; min-height: 0; opacity: 0.85; }
+.chart-col.on .chart-bar, .chart-col:hover .chart-bar { opacity: 1; background: var(--green-dark); }
+.chart-axis { display: flex; gap: 2px; }
+.chart-axis span { flex: 1; min-width: 0; font-size: 11px; color: var(--muted); text-align: center; white-space: nowrap; overflow: visible; }

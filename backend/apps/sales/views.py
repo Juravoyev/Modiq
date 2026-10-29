@@ -1,6 +1,12 @@
-from rest_framework import mixins, viewsets
+from decimal import Decimal
+
+from rest_framework import mixins, permissions, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from apps.common.permissions import IsBusinessMember, IsManager
 
 from .models import Sale, SaleReturn
 from .serializers import (
@@ -12,6 +18,7 @@ from .serializers import (
     SaleReturnSerializer,
     SaleSerializer,
 )
+from .reports import build_dashboard
 from .services import LineInput, ReturnLineInput, create_return, create_sale, decide_return
 
 
@@ -108,3 +115,33 @@ class SaleReturnViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins
     @action(detail=True, methods=["post"])
     def reject(self, request, pk=None):
         return self._decide(False)
+
+
+def _decimals_to_str(value):
+    # Boshqa API javoblari kabi pul summalari satr ko'rinishida qaytadi ("120000.00").
+    if isinstance(value, Decimal):
+        return f"{value:.2f}"
+    if isinstance(value, dict):
+        return {k: _decimals_to_str(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_decimals_to_str(v) for v in value]
+    return value
+
+
+class DashboardView(APIView):
+    """Egasi va menejer uchun umumiy ko'rsatkichlar. ?branch=<id> (ixtiyoriy), ?days=7|30|90."""
+
+    permission_classes = [permissions.IsAuthenticated, IsBusinessMember, IsManager]
+
+    def get(self, request):
+        branches = request.membership.allowed_branches()
+        branch_id = request.query_params.get("branch")
+        if branch_id:
+            if not branch_id.isdigit():
+                raise ValidationError({"branch": "Noto'g'ri filial."})
+            branches = branches.filter(pk=int(branch_id))
+        days = request.query_params.get("days", "30")
+        if days not in ("7", "30", "90"):
+            raise ValidationError({"days": "7, 30 yoki 90 bo'lishi kerak."})
+        data = build_dashboard(business=request.business, branches=branches, days=int(days))
+        return Response(_decimals_to_str(data))

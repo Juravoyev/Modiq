@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from "./auth/AuthContext";
 import { Layout } from "./components/Layout";
 import { Loading } from "./components/ui";
 import { BranchesPage } from "./pages/BranchesPage";
+import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MorePage } from "./pages/MorePage";
 import { PosPage } from "./pages/PosPage";
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route element={<RequireAuth><Layout /></RequireAuth>}>
             <Route index element={<PosPage />} />
+            <Route path="dashboard" element={<RequireManager><DashboardPage /></RequireManager>} />
             <Route path="products" element={<ProductsPage />} />
             <Route path="products/new" element={<RequireManager><ProductFormPage /></RequireManager>} />
             <Route path="products/:id/edit" element={<RequireManager><ProductEditPage /></RequireManager>} />
