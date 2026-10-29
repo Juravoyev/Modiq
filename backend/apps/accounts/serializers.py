@@ -95,10 +95,11 @@ class MeSerializer(serializers.ModelSerializer):
     role = serializers.CharField(source="membership.role", read_only=True)
     business = BusinessSerializer(source="membership.business", read_only=True)
     branches = serializers.SerializerMethodField()
+    can_approve_returns = serializers.BooleanField(source="membership.may_approve_returns", read_only=True)
 
     class Meta:
         model = User
-        fields = ["id", "phone", "full_name", "role", "business", "branches"]
+        fields = ["id", "phone", "full_name", "role", "business", "branches", "can_approve_returns"]
 
     @extend_schema_field(BranchSerializer(many=True))
     def get_branches(self, user):
@@ -117,7 +118,7 @@ class MemberSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Membership
-        fields = ["id", "phone", "full_name", "password", "role", "branch_ids", "is_active"]
+        fields = ["id", "phone", "full_name", "password", "role", "branch_ids", "can_approve_returns", "is_active"]
 
     def get_fields(self):
         fields = super().get_fields()

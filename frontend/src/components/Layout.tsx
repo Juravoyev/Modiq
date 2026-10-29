@@ -13,6 +13,7 @@ export const NAV: NavItem[] = [
   { to: "/transfers", label: "Ko'chirish", icon: "🔁", managerOnly: true },
   { to: "/stock", label: "Qoldiq", icon: "📦", mobile: true },
   { to: "/sales", label: "Savdolar", icon: "📈", mobile: true },
+  { to: "/returns", label: "Qaytarish", icon: "↩" },
   { to: "/staff", label: "Xodimlar", icon: "👥", managerOnly: true },
   { to: "/branches", label: "Filiallar", icon: "🏬", managerOnly: true },
 ];

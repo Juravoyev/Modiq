@@ -13,6 +13,7 @@ import { ProductFormPage } from "./pages/ProductFormPage";
 import { ProductsPage } from "./pages/ProductsPage";
 import { ReceiptsPage } from "./pages/ReceiptsPage";
 import { RegisterPage } from "./pages/RegisterPage";
+import { ReturnsPage } from "./pages/ReturnsPage";
 import { SalesPage } from "./pages/SalesPage";
 import { StaffPage } from "./pages/StaffPage";
 import { StockPage } from "./pages/StockPage";
@@ -48,6 +49,7 @@ export default function App() {
             <Route path="more" element={<MorePage />} />
             <Route path="stock" element={<StockPage />} />
             <Route path="sales" element={<SalesPage />} />
+            <Route path="returns" element={<ReturnsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

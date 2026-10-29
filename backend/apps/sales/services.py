@@ -1,13 +1,16 @@
 from dataclasses import dataclass
-from decimal import Decimal
+from datetime import timedelta
+from decimal import ROUND_HALF_UP, Decimal
 
 from django.db import IntegrityError, transaction
-from rest_framework.exceptions import ValidationError
+from django.db.models import Sum
+from django.utils import timezone
+from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from apps.inventory.models import StockMovement
 from apps.inventory.services import change_stock
 
-from .models import Sale, SaleLine
+from .models import Sale, SaleLine, SaleReturn, SaleReturnLine
 
 ZERO = Decimal("0.00")
 
@@ -85,3 +88,84 @@ def _create_sale(business, branch, user, membership, lines, payment_type, idempo
                      kind=StockMovement.Kind.SALE, user=user, ref=sale)
         SaleLine.objects.create(sale=sale, variant=line.variant, quantity=line.quantity, **c)
     return sale
+
+
+# Yaroqsiz tovar sotuvdan keyin shu muddat ichida qaytariladi.
+RETURN_WINDOW = timedelta(hours=24)
+
+
+def return_deadline(sale):
+    return sale.created_at + RETURN_WINDOW
+
+
+def returned_quantities(sale_line_ids):
+    """Har bir savdo qatoridan qaytarilgan yoki qaytarish kutilayotgan miqdor (rad etilganlar hisobga olinmaydi)."""
+    rows = (SaleReturnLine.objects.filter(sale_line_id__in=sale_line_ids)
+            .exclude(sale_return__status=SaleReturn.Status.REJECTED)
+            .values("sale_line_id").annotate(q=Sum("quantity")))
+    return {r["sale_line_id"]: r["q"] for r in rows}
+
+
+@dataclass
+class ReturnLineInput:
+    sale_line: object
+    quantity: int
+
+
+@transaction.atomic
+def create_return(*, sale, user, membership, lines, reason) -> SaleReturn:
+    """Qaytarish hujjatini yaratadi. Huquqi bor xodimda darhol tasdiqlanadi, aks holda tasdiq kutadi."""
+    # Savdo qulflanadi: bir vaqtda ikki qaytarish bir xil tovarni ikki marta qaytara olmaydi.
+    sale = Sale.objects.select_for_update().get(pk=sale.pk)
+    if timezone.now() > return_deadline(sale):
+        raise ValidationError({"detail": "Qaytarish muddati (24 soat) o'tib ketgan.", "code": "return_expired"})
+    if not reason.strip():
+        raise ValidationError({"reason": "Yaroqsizlik sababini yozing."})
+    if not lines:
+        raise ValidationError({"detail": "Kamida bitta tovarni tanlang."})
+    ids = [line.sale_line.id for line in lines]
+    if len(ids) != len(set(ids)):
+        raise ValidationError({"detail": "Bir tovar qaytarishda faqat bir marta bo'lishi kerak."})
+
+    already = returned_quantities(ids)
+    rows = []
+    for line in lines:
+        sl = line.sale_line
+        if sl.sale_id != sale.id:
+            raise ValidationError({"detail": "Tovar bu savdoga tegishli emas."})
+        left = sl.quantity - already.get(sl.id, 0)
+        if line.quantity > left:
+            raise ValidationError({"detail": f"{sl.variant.sku}: ko'pi bilan {left} dona qaytarish mumkin.",
+                                   "code": "return_quantity_exceeded"})
+        # Mijozga chegirma bilan to'lagan narxi qaytariladi (qator summasining ulushi).
+        refund = (sl.line_total * line.quantity / sl.quantity).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        rows.append((sl, line.quantity, refund))
+
+    approved = membership.may_approve_returns
+    sale_return = SaleReturn.objects.create(
+        business=sale.business, sale=sale, branch=sale.branch, reason=reason.strip(), requested_by=user,
+        status=SaleReturn.Status.APPROVED if approved else SaleReturn.Status.PENDING,
+        decided_by=user if approved else None, decided_at=timezone.now() if approved else None,
+        refund_total=sum((r for _, _, r in rows), ZERO),
+        cost_total=sum((sl.unit_cost * q for sl, q, _ in rows), ZERO),
+    )
+    SaleReturnLine.objects.bulk_create([
+        SaleReturnLine(sale_return=sale_return, sale_line=sl, quantity=q, refund_amount=r, unit_cost=sl.unit_cost)
+        for sl, q, r in rows
+    ])
+    return sale_return
+
+
+@transaction.atomic
+def decide_return(return_id: int, *, user, membership, approve: bool, note="") -> SaleReturn:
+    if not membership.may_approve_returns:
+        raise PermissionDenied("Qaytarishni tasdiqlash huquqingiz yo'q.")
+    sale_return = SaleReturn.objects.select_for_update().get(pk=return_id)
+    if sale_return.status != SaleReturn.Status.PENDING:
+        raise ValidationError({"detail": "Bu qaytarish allaqachon ko'rib chiqilgan.", "code": "invalid_status"})
+    sale_return.status = SaleReturn.Status.APPROVED if approve else SaleReturn.Status.REJECTED
+    sale_return.decided_by = user
+    sale_return.decided_at = timezone.now()
+    sale_return.decision_note = note
+    sale_return.save(update_fields=["status", "decided_by", "decided_at", "decision_note", "updated_at"])
+    return sale_return

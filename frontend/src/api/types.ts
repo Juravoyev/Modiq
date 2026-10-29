@@ -9,6 +9,8 @@ export interface Me {
   role: Role;
   business: { id: number; name: string; phone: string; address: string; currency: string };
   branches: Branch[];
+  /** Egasi, menejer yoki egasi huquq bergan sotuvchi. */
+  can_approve_returns: boolean;
 }
 
 export interface Page<T> { count: number; next: string | null; previous: string | null; results: T[] }
@@ -81,6 +83,8 @@ export interface SaleLine {
   discount_amount: string;
   line_total: string;
   below_cost: boolean;
+  /** Qaytarilgan yoki qaytarish tasdig'ini kutayotgan miqdor. */
+  returned_quantity: number;
 }
 
 export interface Sale {
@@ -97,6 +101,7 @@ export interface Sale {
   total: string;
   note: string;
   lines: SaleLine[];
+  return_deadline: string;
   cost_total?: string;
   gross_profit?: string;
 }
@@ -107,6 +112,7 @@ export interface Member {
   full_name: string;
   role: Role;
   branch_ids: number[];
+  can_approve_returns: boolean;
   is_active: boolean;
 }
 
@@ -127,4 +133,25 @@ export interface Transfer {
   received_at: string | null;
   cancelled_at: string | null;
   created_at: string;
+}
+
+export type ReturnStatus = "pending" | "approved" | "rejected";
+
+export interface SaleReturn {
+  id: number;
+  created_at: string;
+  sale: number;
+  branch: number;
+  branch_name: string;
+  status: ReturnStatus;
+  status_display: string;
+  reason: string;
+  refund_total: string;
+  requested_by_name: string;
+  decided_by_name: string;
+  decided_at: string | null;
+  decision_note: string;
+  lines: { id: number; sale_line: number; sku: string; variant_name: string; quantity: number; refund_amount: string }[];
+  // Faqat menejerga: hisobdan chiqarilgan tannarx (zarar).
+  cost_total?: string;
 }

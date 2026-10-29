@@ -93,11 +93,17 @@ class Membership(TimeStampedModel):
     role = models.CharField(max_length=16, choices=Role.choices, default=Role.CASHIER)
     # Sotuvchi faqat shu filiallarni ko'radi. Egasi va menejer barcha filiallarni ko'radi.
     branches = models.ManyToManyField(Branch, blank=True, related_name="members")
+    # Egasi va menejerda bu huquq doim bor. Egasi uni alohida sotuvchiga ham berishi mumkin.
+    can_approve_returns = models.BooleanField("Qaytarishni tasdiqlay oladi", default=False)
     is_active = models.BooleanField(default=True)
 
     @property
     def is_manager(self) -> bool:
         return self.role in (self.Role.OWNER, self.Role.MANAGER)
+
+    @property
+    def may_approve_returns(self) -> bool:
+        return self.is_manager or self.can_approve_returns
 
     def allowed_branches(self):
         qs = Branch.objects.filter(business=self.business, is_active=True)

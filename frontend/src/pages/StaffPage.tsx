@@ -9,7 +9,10 @@ import { Chips, toggle } from "./ProductFormPage";
 
 const ROLES: Record<Role, string> = { owner: "Egasi", manager: "Menejer", cashier: "Sotuvchi" };
 
-const blank = { phone: "", full_name: "", password: "", role: "cashier" as Role, branch_ids: [] as number[], is_active: true };
+const blank = {
+  phone: "", full_name: "", password: "", role: "cashier" as Role, branch_ids: [] as number[],
+  can_approve_returns: false, is_active: true,
+};
 
 /** Yangi xodim qo'shish yoki mavjudini tahrirlash formasi (faqat do'kon egasi uchun). */
 function MemberForm({ member, branches, onSaved, onCancel }: {
@@ -29,7 +32,9 @@ function MemberForm({ member, branches, onSaved, onCancel }: {
     try {
       if (member) {
         const body: Record<string, unknown> = { full_name: form.full_name, branch_ids: form.branch_ids };
-        if (!isOwnerRow) Object.assign(body, { role: form.role, is_active: form.is_active });
+        if (!isOwnerRow) {
+          Object.assign(body, { role: form.role, is_active: form.is_active, can_approve_returns: form.can_approve_returns });
+        }
         if (form.password) body.password = form.password;
         await api(`/auth/members/${member.id}/`, { method: "PATCH", body });
         onSaved("Xodim ma'lumotlari saqlandi.");
@@ -77,7 +82,14 @@ function MemberForm({ member, branches, onSaved, onCancel }: {
                  onToggle={(id) => setForm({ ...form, branch_ids: toggle(form.branch_ids, id) })} />
         </Field>
       )}
-      {form.role !== "cashier" && <p className="muted" style={{ margin: 0 }}>Menejer barcha filiallarni ko'radi, tannarx va foydani ham ko'radi.</p>}
+      {form.role === "cashier" && (
+        <label className="row" style={{ gap: 8 }}>
+          <input type="checkbox" checked={form.can_approve_returns}
+                 onChange={(e) => setForm({ ...form, can_approve_returns: e.target.checked })} />
+          Yaroqsiz tovar qaytarilishini tasdiqlay oladi (mas'ul shaxs)
+        </label>
+      )}
+      {form.role !== "cashier" && <p className="muted" style={{ margin: 0 }}>Menejer barcha filiallarni ko'radi, tannarx va foydani ham ko'radi, qaytarishni tasdiqlaydi.</p>}
       {member && !isOwnerRow && (
         <label className="row" style={{ gap: 8 }}>
           <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} />
@@ -132,7 +144,7 @@ export function StaffPage() {
                   <tr key={m.id}>
                     <td><b>{m.full_name || "—"}</b>{m.phone === me?.phone && <span className="muted"> (siz)</span>}</td>
                     <td className="num">{m.phone}</td>
-                    <td>{ROLES[m.role]}</td>
+                    <td>{ROLES[m.role]}{m.role === "cashier" && m.can_approve_returns && <div className="muted">Qaytarish uchun mas'ul</div>}</td>
                     <td>{m.role === "cashier" ? (m.branch_ids.map(branchName).join(", ") || <span className="field-error">Biriktirilmagan</span>) : "Barchasi"}</td>
                     <td>{m.is_active ? <span className="badge badge-ok">● Faol</span> : <span className="badge badge-neutral">○ O'chirilgan</span>}</td>
                     <td>{isOwner && <button className="btn btn-secondary btn-sm" onClick={() => { setEditing(m); setMessage(null); }}>✎ Tahrirlash</button>}</td>
