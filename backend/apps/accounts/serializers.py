@@ -67,6 +67,22 @@ class BranchSerializer(serializers.ModelSerializer):
         model = Branch
         fields = ["id", "name", "kind", "address", "is_active"]
 
+    def validate_name(self, value):
+        qs = Branch.objects.filter(business=self.context["request"].business, name__iexact=value)
+        if self.instance is not None:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("Bu nomli filial allaqachon mavjud.")
+        return value
+
+    def validate_is_active(self, value):
+        # Oxirgi faol filial yopilsa, hech kim savdo qila olmay qoladi.
+        if not value and self.instance is not None and self.instance.is_active:
+            others = Branch.objects.filter(business=self.instance.business, is_active=True).exclude(pk=self.instance.pk)
+            if not others.exists():
+                raise serializers.ValidationError("Kamida bitta faol filial qolishi kerak.")
+        return value
+
 
 class BusinessSerializer(serializers.ModelSerializer):
     class Meta:
@@ -131,3 +147,33 @@ class MemberSerializer(serializers.ModelSerializer):
         membership = Membership.objects.create(user=user, **validated)
         membership.branches.set(branches)
         return membership
+
+
+class MemberUpdateSerializer(MemberSerializer):
+    """Xodimni tahrirlash: telefon o'zgarmaydi, parol faqat berilsa almashtiriladi."""
+
+    phone = serializers.CharField(source="user.phone", read_only=True)
+    password = serializers.CharField(write_only=True, min_length=8, required=False)
+
+    def validate(self, attrs):
+        if self.instance.role == Membership.Role.OWNER and ("role" in attrs or attrs.get("is_active") is False):
+            raise serializers.ValidationError({"detail": "Do'kon egasining roli va holatini o'zgartirib bo'lmaydi."})
+        return attrs
+
+    @transaction.atomic
+    def update(self, instance, validated):
+        user_data = validated.pop("user", {})
+        branches = validated.pop("branches", None)
+        password = validated.pop("password", None)
+        user = instance.user
+        if "full_name" in user_data:
+            user.full_name = user_data["full_name"]
+        if password:
+            user.set_password(password)
+        user.save()
+        for name, value in validated.items():
+            setattr(instance, name, value)
+        instance.save()
+        if branches is not None:
+            instance.branches.set(branches)
+        return instance

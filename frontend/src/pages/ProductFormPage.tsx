@@ -7,7 +7,7 @@ import { ImagePicker } from "../components/ImagePicker";
 import { ErrorBox, Field, Loading } from "../components/ui";
 import { useAsync } from "../utils/useAsync";
 
-function Chips<T extends NamedRef>({ items, selected, onToggle }: { items: T[]; selected: number[]; onToggle: (id: number) => void }) {
+export function Chips<T extends NamedRef>({ items, selected, onToggle }: { items: T[]; selected: number[]; onToggle: (id: number) => void }) {
   return (
     <div className="row" style={{ gap: 8 }}>
       {items.map((i) => (
@@ -20,7 +20,7 @@ function Chips<T extends NamedRef>({ items, selected, onToggle }: { items: T[]; 
   );
 }
 
-function QuickAdd({ placeholder, onAdd }: { placeholder: string; onAdd: (name: string) => Promise<void> }) {
+export function QuickAdd({ placeholder, onAdd }: { placeholder: string; onAdd: (name: string) => Promise<void> }) {
   const [value, setValue] = useState("");
   const [err, setErr] = useState<string | null>(null);
   async function add() {
@@ -45,7 +45,7 @@ function QuickAdd({ placeholder, onAdd }: { placeholder: string; onAdd: (name: s
   );
 }
 
-const toggle = (list: number[], id: number) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
+export const toggle = (list: number[], id: number) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
 
 export function ProductFormPage() {
   const navigate = useNavigate();

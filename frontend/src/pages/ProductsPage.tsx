@@ -4,40 +4,9 @@ import { Link, useLocation } from "react-router-dom";
 import { api, qs } from "../api/client";
 import type { Page, Product } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
-import { ImagePicker } from "../components/ImagePicker";
 import { Empty, ErrorBox, Loading, Pagination, ProductThumb, StockBadge } from "../components/ui";
 import { money } from "../utils/format";
 import { useAsync, useDebounced } from "../utils/useAsync";
-
-function ProductImageEditor({ product, onChange }: { product: Product; onChange: (p: Product) => void }) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function run(method: "POST" | "DELETE", file?: File) {
-    setBusy(true);
-    setError(null);
-    try {
-      let body: FormData | undefined;
-      if (file) {
-        body = new FormData();
-        body.append("image", file);
-      }
-      onChange(await api<Product>(`/catalog/products/${product.id}/image/`, { method, body }));
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="stack" style={{ gap: 4, marginBottom: 12 }}>
-      <ImagePicker key={product.image ?? "none"} current={product.image} busy={busy}
-                   onPick={(f) => void run("POST", f)} onRemove={() => void run("DELETE")} />
-      {error && <span className="field-error">{error}</span>}
-    </div>
-  );
-}
 
 export function ProductsPage() {
   const notice = (useLocation().state as { notice?: string } | null)?.notice;
@@ -47,7 +16,7 @@ export function ProductsPage() {
   const [page, setPage] = useState(1);
   const [open, setOpen] = useState<number | null>(null);
 
-  const { data, error, loading, reload, setData } = useAsync(
+  const { data, error, loading, reload } = useAsync(
     () => api<Page<Product>>(`/catalog/products/${qs({ search, page, branch: branch?.id })}`),
     [search, page, branch?.id],
   );
@@ -94,10 +63,9 @@ export function ProductsPage() {
                         <tr>
                           <td colSpan={5} style={{ background: "var(--bg)" }}>
                             {isManager && (
-                              <ProductImageEditor product={p} onChange={(updated) => setData((d) => d && {
-                                // Faqat rasm yangilanadi: javobdagi qoldiq filial filtrisiz hisoblangan.
-                                ...d, results: d.results.map((x) => (x.id === updated.id ? { ...x, image: updated.image } : x)),
-                              })} />
+                              <div style={{ marginBottom: 12 }}>
+                                <Link className="btn btn-secondary btn-sm" to={`/products/${p.id}/edit`}>✎ Tahrirlash</Link>
+                              </div>
                             )}
                             {p.variants.length === 0 ? <span className="muted">Variantlar yo'q</span> : (
                               <table className="table">

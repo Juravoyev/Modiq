@@ -40,3 +40,17 @@ class IsManager(BasePermission):
     def has_permission(self, request, view):
         membership = getattr(request, "membership", None)
         return bool(membership and membership.is_manager)
+
+
+class IsOwnerOrReadOnly(BasePermission):
+    """O'qish menejerga ham, yozish (xodim qo'shish, rolini o'zgartirish) faqat do'kon egasiga."""
+
+    message = "Bu amal uchun do'kon egasi huquqi kerak."
+
+    def has_permission(self, request, view):
+        membership = getattr(request, "membership", None)
+        if membership is None:
+            return False
+        if request.method in ("GET", "HEAD", "OPTIONS"):
+            return membership.is_manager
+        return membership.role == membership.Role.OWNER

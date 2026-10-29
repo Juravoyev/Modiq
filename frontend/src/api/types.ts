@@ -100,3 +100,31 @@ export interface Sale {
   cost_total?: string;
   gross_profit?: string;
 }
+
+export interface Member {
+  id: number;
+  phone: string;
+  full_name: string;
+  role: Role;
+  branch_ids: number[];
+  is_active: boolean;
+}
+
+export type TransferStatus = "draft" | "sent" | "received" | "cancelled";
+
+export interface TransferLine { id?: number; variant: number; sku: string; variant_name: string; quantity: number }
+
+export interface Transfer {
+  id: number;
+  from_branch: number;
+  from_branch_name: string;
+  to_branch: number;
+  to_branch_name: string;
+  status: TransferStatus;
+  note: string;
+  lines: TransferLine[];
+  sent_at: string | null;
+  received_at: string | null;
+  cancelled_at: string | null;
+  created_at: string;
+}

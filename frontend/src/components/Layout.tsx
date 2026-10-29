@@ -3,18 +3,28 @@ import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { Logo } from "./Logo";
 
-const NAV = [
-  { to: "/", label: "Kassa", icon: "🧾", end: true },
-  { to: "/products", label: "Tovarlar", icon: "👕" },
+interface NavItem { to: string; label: string; icon: string; end?: boolean; managerOnly?: boolean; mobile?: boolean }
+
+// mobile: telefonning pastki menyusida ko'rinadi, qolganlari "Yana" sahifasida.
+export const NAV: NavItem[] = [
+  { to: "/", label: "Kassa", icon: "🧾", end: true, mobile: true },
+  { to: "/products", label: "Tovarlar", icon: "👕", mobile: true },
   { to: "/receipts", label: "Kirim", icon: "📥", managerOnly: true },
-  { to: "/stock", label: "Qoldiq", icon: "📦" },
-  { to: "/sales", label: "Savdolar", icon: "📈" },
+  { to: "/transfers", label: "Ko'chirish", icon: "🔁", managerOnly: true },
+  { to: "/stock", label: "Qoldiq", icon: "📦", mobile: true },
+  { to: "/sales", label: "Savdolar", icon: "📈", mobile: true },
+  { to: "/staff", label: "Xodimlar", icon: "👥", managerOnly: true },
+  { to: "/branches", label: "Filiallar", icon: "🏬", managerOnly: true },
 ];
+
+export function navFor(isManager: boolean) {
+  return NAV.filter((n) => isManager || !n.managerOnly);
+}
 
 export function Layout() {
   const { me, branch, setBranchId, logout, isManager } = useAuth();
   const branches = me?.branches ?? [];
-  const nav = NAV.filter((n) => isManager || !n.managerOnly);
+  const nav = navFor(isManager);
 
   return (
     <div className="app">
@@ -56,12 +66,16 @@ export function Layout() {
       </div>
 
       <nav className="bottom-nav" aria-label="Asosiy menyu">
-        {nav.map((n) => (
+        {nav.filter((n) => n.mobile).map((n) => (
           <NavLink key={n.to} to={n.to} end={n.end}>
             <span aria-hidden="true" style={{ fontSize: 20 }}>{n.icon}</span>
             {n.label}
           </NavLink>
         ))}
+        <NavLink to="/more">
+          <span aria-hidden="true" style={{ fontSize: 20 }}>☰</span>
+          Yana
+        </NavLink>
       </nav>
     </div>
   );
