@@ -67,6 +67,22 @@ class BranchSerializer(serializers.ModelSerializer):
         model = Branch
         fields = ["id", "name", "kind", "address", "is_active"]
 
+    def validate_name(self, value):
+        qs = Branch.objects.filter(business=self.context["request"].business, name__iexact=value)
+        if self.instance is not None:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("Bu nomli filial allaqachon mavjud.")
+        return value
+
+    def validate_is_active(self, value):
+        # Oxirgi faol filial yopilsa, hech kim savdo qila olmay qoladi.
+        if not value and self.instance is not None and self.instance.is_active:
+            others = Branch.objects.filter(business=self.instance.business, is_active=True).exclude(pk=self.instance.pk)
+            if not others.exists():
+                raise serializers.ValidationError("Kamida bitta faol filial qolishi kerak.")
+        return value
+
 
 class BusinessSerializer(serializers.ModelSerializer):
     class Meta:
@@ -79,10 +95,11 @@ class MeSerializer(serializers.ModelSerializer):
     role = serializers.CharField(source="membership.role", read_only=True)
     business = BusinessSerializer(source="membership.business", read_only=True)
     branches = serializers.SerializerMethodField()
+    can_approve_returns = serializers.BooleanField(source="membership.may_approve_returns", read_only=True)
 
     class Meta:
         model = User
-        fields = ["id", "phone", "full_name", "role", "business", "branches"]
+        fields = ["id", "phone", "full_name", "role", "business", "branches", "can_approve_returns"]
 
     @extend_schema_field(BranchSerializer(many=True))
     def get_branches(self, user):
@@ -103,7 +120,8 @@ class MemberSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Membership
-        fields = ["id", "phone", "full_name", "password", "role", "branch_ids", "branch_names", "is_active"]
+        fields = ["id", "phone", "full_name", "password", "role", "branch_ids", "branch_names", "can_approve_returns",
+                  "is_active"]
 
     def get_fields(self):
         fields = super().get_fields()
@@ -140,48 +158,34 @@ class MemberSerializer(serializers.ModelSerializer):
         return membership
 
 
-class MemberUpdateSerializer(serializers.ModelSerializer):
-    """Xodim rolini, filiallarini, faolligini va (ixtiyoriy) parolini o'zgartirish."""
+class MemberUpdateSerializer(MemberSerializer):
+    """Xodimni tahrirlash: telefon o'zgarmaydi, parol faqat berilsa almashtiriladi."""
 
     phone = serializers.CharField(source="user.phone", read_only=True)
-    full_name = serializers.CharField(source="user.full_name", required=False, allow_blank=True)
     password = serializers.CharField(write_only=True, min_length=8, required=False)
-    branch_ids = serializers.PrimaryKeyRelatedField(
-        source="branches", many=True, queryset=Branch.objects.all(), required=False
-    )
-
-    class Meta:
-        model = Membership
-        fields = ["id", "phone", "full_name", "password", "role", "branch_ids", "is_active"]
-
-    def get_fields(self):
-        fields = super().get_fields()
-        request = self.context.get("request")
-        if request is not None and hasattr(request, "business"):
-            fields["branch_ids"].child_relation.queryset = Branch.objects.filter(business=request.business)
-        return fields
 
     def validate(self, attrs):
-        if self.instance.role == Membership.Role.OWNER:
-            raise serializers.ValidationError({"detail": "Do'kon egasining ma'lumotini bu yerdan o'zgartirib bo'lmaydi."})
-        if attrs.get("role") == Membership.Role.OWNER:
-            raise serializers.ValidationError({"role": "Egalik huquqini bu yerdan berib bo'lmaydi."})
+        if self.instance.role == Membership.Role.OWNER and ("role" in attrs or attrs.get("is_active") is False):
+            raise serializers.ValidationError({"detail": "Do'kon egasining roli va holatini o'zgartirib bo'lmaydi."})
         return attrs
 
     @transaction.atomic
     def update(self, instance, validated):
         user_data = validated.pop("user", {})
-        password = validated.pop("password", None)
         branches = validated.pop("branches", None)
+        password = validated.pop("password", None)
         user = instance.user
         if "full_name" in user_data:
             user.full_name = user_data["full_name"]
         if password:
             user.set_password(password)
         if "is_active" in validated:
+            # Faolsizlantirilgan xodim tizimga kira olmaydi.
             user.is_active = validated["is_active"]
         user.save()
-        instance = super().update(instance, validated)
+        for name, value in validated.items():
+            setattr(instance, name, value)
+        instance.save()
         if branches is not None:
             instance.branches.set(branches)
         return instance

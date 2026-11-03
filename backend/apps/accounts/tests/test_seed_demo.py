@@ -23,3 +23,11 @@ class SeedDemoTests(TestCase):
         # Bitta tasdiqlangan va bitta tannarxdan past qoralama chegirma
         self.assertEqual(Discount.objects.filter(business=biz, status="approved").count(), 1)
         self.assertTrue(Discount.objects.get(business=biz, status="draft").below_cost)
+
+    def test_seed_demo_and_seed_presentation_replace_each_other(self):
+        # Ikkala buyruq bir xil telefonlardan foydalanadi: --reset boshqasining demo do'konini o'chiradi.
+        call_command("seed_demo", stdout=io.StringIO())
+        call_command("seed_presentation", "--reset", stdout=io.StringIO())
+        self.assertEqual(list(Business.objects.values_list("name", flat=True)), ["Moda Uz"])
+        call_command("seed_demo", "--reset", stdout=io.StringIO())
+        self.assertEqual(list(Business.objects.values_list("name", flat=True)), ["Modiq Demo do'koni"])

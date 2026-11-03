@@ -39,7 +39,7 @@ function NewReceipt({ onSaved }: { onSaved: (r: Receipt) => void }) {
   function add(v: Variant) {
     if (!lines.some((l) => l.variant === v.id)) {
       setLines([...lines, { variant: v.id, sku: v.sku, variant_name: `${v.product_name} / ${v.color_name} / ${v.size_name}`,
-                            quantity: 1, purchase_price: v.effective_purchase_price }]);
+                            quantity: 1, purchase_price: v.effective_purchase_price ?? "" }]);
     }
     setQuery("");
   }

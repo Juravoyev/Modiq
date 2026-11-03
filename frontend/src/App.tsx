@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
 import { Layout } from "./components/Layout";
 import { Loading } from "./components/ui";
+import { BranchesPage } from "./pages/BranchesPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { DiscountsPage } from "./pages/DiscountsPage";
 import { InsightsPage } from "./pages/InsightsPage";
@@ -16,8 +17,10 @@ import { ProductsPage } from "./pages/ProductsPage";
 import { ReceiptsPage } from "./pages/ReceiptsPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { RegisterPage } from "./pages/RegisterPage";
+import { ReturnsPage } from "./pages/ReturnsPage";
 import { SalesPage } from "./pages/SalesPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { StaffPage } from "./pages/StaffPage";
 import { StockCountPage } from "./pages/StockCountPage";
 import { StockPage } from "./pages/StockPage";
 import { TransfersPage } from "./pages/TransfersPage";
@@ -53,15 +56,18 @@ export default function App() {
             <Route path="pos" element={<PosPage />} />
             <Route path="insights" element={<InsightsPage />} />
             <Route path="products" element={<ProductsPage />} />
-            <Route path="products/new" element={<ProductFormPage />} />
-            <Route path="products/:id/edit" element={<ProductEditPage />} />
-            <Route path="transfers" element={<TransfersPage />} />
+            <Route path="products/new" element={<ManagerOnly><ProductFormPage /></ManagerOnly>} />
+            <Route path="products/:id/edit" element={<ManagerOnly><ProductEditPage /></ManagerOnly>} />
+            <Route path="receipts" element={<ManagerOnly><ReceiptsPage /></ManagerOnly>} />
+            <Route path="transfers" element={<ManagerOnly><TransfersPage /></ManagerOnly>} />
             <Route path="counts" element={<StockCountPage />} />
-            <Route path="settings" element={<SettingsPage />} />
+            <Route path="staff" element={<ManagerOnly><StaffPage /></ManagerOnly>} />
+            <Route path="branches" element={<ManagerOnly><BranchesPage /></ManagerOnly>} />
+            <Route path="settings" element={<ManagerOnly><SettingsPage /></ManagerOnly>} />
             <Route path="more" element={<MorePage />} />
-            <Route path="receipts" element={<ReceiptsPage />} />
             <Route path="stock" element={<StockPage />} />
             <Route path="sales" element={<SalesPage />} />
+            <Route path="returns" element={<ReturnsPage />} />
             <Route path="discounts" element={<ManagerOnly><DiscountsPage /></ManagerOnly>} />
             <Route path="reports" element={<ManagerOnly><ReportsPage /></ManagerOnly>} />
           </Route>

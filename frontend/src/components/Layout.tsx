@@ -3,32 +3,42 @@ import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { Logo } from "./Logo";
 
-export const NAV = [
-  { to: "/dashboard", label: "Bosh sahifa", icon: "🏠", managerOnly: false, mobile: true },
-  { to: "/pos", label: "Kassa", icon: "🧾", managerOnly: false, mobile: true },
-  { to: "/products", label: "Tovarlar", icon: "👕", managerOnly: false, mobile: true },
-  { to: "/insights", label: "Aqlli tavsiyalar", icon: "💡", managerOnly: false, mobile: true },
-  { to: "/stock", label: "Qoldiq", icon: "📦", managerOnly: false, mobile: false },
-  { to: "/receipts", label: "Kirim", icon: "📥", managerOnly: false, mobile: false },
-  { to: "/transfers", label: "Ko'chirish", icon: "🔁", managerOnly: false, mobile: false },
-  { to: "/counts", label: "Inventarizatsiya", icon: "📋", managerOnly: false, mobile: false },
-  { to: "/sales", label: "Savdolar", icon: "📈", managerOnly: false, mobile: false },
-  { to: "/discounts", label: "Chegirmalar", icon: "🏷️", managerOnly: true, mobile: false },
-  { to: "/reports", label: "Hisobotlar", icon: "📊", managerOnly: true, mobile: false },
-  { to: "/settings", label: "Sozlamalar", icon: "⚙️", managerOnly: true, mobile: false },
+interface NavItem { to: string; label: string; icon: string; end?: boolean; managerOnly?: boolean; mobile?: boolean }
+
+// mobile: telefonning pastki menyusida ko'rinadi, qolganlari "Yana" sahifasida.
+export const NAV: NavItem[] = [
+  { to: "/dashboard", label: "Bosh sahifa", icon: "🏠", mobile: true },
+  { to: "/pos", label: "Kassa", icon: "🧾", mobile: true },
+  { to: "/products", label: "Tovarlar", icon: "👕", mobile: true },
+  { to: "/insights", label: "Aqlli tavsiyalar", icon: "💡", mobile: true },
+  { to: "/stock", label: "Qoldiq", icon: "📦" },
+  { to: "/receipts", label: "Kirim", icon: "📥", managerOnly: true },
+  { to: "/transfers", label: "Ko'chirish", icon: "🔁", managerOnly: true },
+  { to: "/counts", label: "Inventarizatsiya", icon: "📋" },
+  { to: "/sales", label: "Savdolar", icon: "📈" },
+  { to: "/returns", label: "Qaytarish", icon: "↩" },
+  { to: "/discounts", label: "Chegirmalar", icon: "🏷️", managerOnly: true },
+  { to: "/reports", label: "Hisobotlar", icon: "📊", managerOnly: true },
+  { to: "/staff", label: "Xodimlar", icon: "👥", managerOnly: true },
+  { to: "/branches", label: "Filiallar", icon: "🏬", managerOnly: true },
+  { to: "/settings", label: "Sozlamalar", icon: "⚙️", managerOnly: true },
 ];
+
+export function navFor(isManager: boolean) {
+  return NAV.filter((n) => isManager || !n.managerOnly);
+}
 
 export function Layout() {
   const { me, branch, setBranchId, logout, isManager } = useAuth();
   const branches = me?.branches ?? [];
-  const items = NAV.filter((n) => !n.managerOnly || isManager);
+  const nav = navFor(isManager);
 
   return (
     <div className="app">
       <aside className="sidebar">
         <div className="brand"><Logo /> Modiq</div>
-        {items.map((n) => (
-          <NavLink key={n.to} to={n.to} className="nav-link">
+        {nav.map((n) => (
+          <NavLink key={n.to} to={n.to} end={n.end} className="nav-link">
             <span aria-hidden="true">{n.icon}</span> {n.label}
           </NavLink>
         ))}
@@ -61,13 +71,16 @@ export function Layout() {
       </div>
 
       <nav className="bottom-nav" aria-label="Asosiy menyu">
-        {items.filter((n) => n.mobile).map((n) => (
-          <NavLink key={n.to} to={n.to}>
+        {nav.filter((n) => n.mobile).map((n) => (
+          <NavLink key={n.to} to={n.to} end={n.end}>
             <span aria-hidden="true" style={{ fontSize: 20 }}>{n.icon}</span>
             {n.label === "Aqlli tavsiyalar" ? "Tavsiyalar" : n.label}
           </NavLink>
         ))}
-        <NavLink to="/more"><span aria-hidden="true" style={{ fontSize: 20 }}>☰</span>Yana</NavLink>
+        <NavLink to="/more">
+          <span aria-hidden="true" style={{ fontSize: 20 }}>☰</span>
+          Yana
+        </NavLink>
       </nav>
     </div>
   );

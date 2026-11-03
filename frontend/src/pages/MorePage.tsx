@@ -1,23 +1,24 @@
 import { Link } from "react-router-dom";
 
 import { useAuth } from "../auth/AuthContext";
-import { NAV } from "../components/Layout";
+import { navFor } from "../components/Layout";
 
-/** Mobil ekranda pastki menyuga sig'magan bo'limlar. */
+/** Telefonda pastki menyuga sig'magan bo'limlar. */
 export function MorePage() {
-  const { isManager, logout, me } = useAuth();
+  const { isManager, me, logout } = useAuth();
   return (
     <div className="stack">
       <h1>Bo'limlar</h1>
-      <div className="more-grid">
-        {NAV.filter((n) => !n.managerOnly || isManager).map((n) => (
-          <Link key={n.to} to={n.to} className="card"><span style={{ fontSize: 24 }} aria-hidden="true">{n.icon}</span>{n.label}</Link>
+      <div className="stack" style={{ gap: 8 }}>
+        {navFor(isManager).map((n) => (
+          <Link key={n.to} to={n.to} className="result-item" style={{ textDecoration: "none", color: "inherit" }}>
+            <span><span aria-hidden="true">{n.icon}</span> {n.label}</span>
+            <span className="muted">›</span>
+          </Link>
         ))}
       </div>
-      <div className="card spread">
-        <span className="muted">{me?.full_name || me?.phone}</span>
-        <button className="btn btn-secondary" onClick={logout}>Chiqish</button>
-      </div>
+      <div className="muted">{me?.full_name || me?.phone}</div>
+      <div><button className="btn btn-secondary" onClick={logout}>Chiqish</button></div>
     </div>
   );
 }

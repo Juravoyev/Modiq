@@ -12,7 +12,7 @@ from django.db.models import Max, Min, Q, Sum
 from django.utils import timezone
 
 from apps.inventory.models import Stock, StockMovement
-from apps.sales.models import SaleLine, SaleReturnLine
+from apps.sales.models import SaleLine, SaleReturn, SaleReturnLine
 
 from .models import RiskSettings
 from .seasons import season_state
@@ -103,6 +103,7 @@ def compute_insights(business, branches, today=None, donor_branches=None) -> lis
         (r["sale_return__branch_id"], r["sale_line__variant_id"]): r["q"] or 0
         for r in SaleReturnLine.objects.filter(sale_return__business=business, sale_return__branch_id__in=branch_ids,
                                                sale_return__created_at__gte=window_start)
+        .exclude(sale_return__status=SaleReturn.Status.REJECTED)
         .values("sale_return__branch_id", "sale_line__variant_id").annotate(q=Sum("quantity"))
     }
     first_in = {

@@ -9,6 +9,8 @@ export interface Me {
   role: Role;
   business: { id: number; name: string; phone: string; address: string; currency: string };
   branches: Branch[];
+  /** Egasi, menejer yoki egasi huquq bergan sotuvchi. */
+  can_approve_returns: boolean;
 }
 
 export interface Page<T> { count: number; next: string | null; previous: string | null; results: T[] }
@@ -21,17 +23,19 @@ export interface Variant {
   id: number;
   product: number;
   product_name: string;
+  product_image: string | null;
   color: number;
   color_name: string;
   size: number;
   size_name: string;
   sku: string;
   barcode: string;
-  purchase_price: string | null;
+  // Tannarx maydonlari faqat egasi va menejerga keladi, kassirda bo'lmaydi.
+  purchase_price?: string | null;
   sale_price: string | null;
   min_stock: number | null;
   is_active: boolean;
-  effective_purchase_price: string;
+  effective_purchase_price?: string;
   effective_sale_price: string;
   effective_min_stock: number;
   stock: number | null;
@@ -44,7 +48,7 @@ export interface Product {
   category: number | null;
   brand: number | null;
   season: number | null;
-  purchase_price: string;
+  purchase_price?: string;
   sale_price: string;
   min_stock: number;
   image: string | null;
@@ -79,6 +83,7 @@ export interface SaleLine {
   discount_amount: string;
   line_total: string;
   below_cost: boolean;
+  /** Qaytarilgan yoki qaytarish tasdig'ini kutayotgan miqdor. */
   returned_quantity: number;
 }
 
@@ -97,13 +102,12 @@ export interface Sale {
   returned_total: string;
   note: string;
   lines: SaleLine[];
-  returns: SaleReturn[];
+  /** Shu savdo bo'yicha qaytarishlar (rad etilganlari ham). */
+  returns: SaleReturnBrief[];
+  return_deadline: string;
   cost_total?: string;
   gross_profit?: string;
 }
-
-export interface SaleReturn { id: number; created_at: string; sale: number; refund_total: string; reason: string;
-  lines: { id: number; sale_line: number; sku: string; quantity: number; refund_amount: string }[] }
 
 export type RiskType = "no_sale" | "overstock" | "seasonal" | "restock";
 export type RiskLevel = "high" | "medium" | "low";
@@ -167,20 +171,6 @@ export interface Dashboard {
 
 export type DocStatus = "draft" | "sent" | "received" | "cancelled" | "confirmed" | "applied";
 
-export interface Transfer {
-  id: number;
-  from_branch: number;
-  from_branch_name: string;
-  to_branch: number;
-  to_branch_name: string;
-  status: "draft" | "sent" | "received" | "cancelled";
-  note: string;
-  lines: { id?: number; variant: number; sku: string; variant_name: string; quantity: number }[];
-  created_at: string;
-  sent_at: string | null;
-  received_at: string | null;
-}
-
 export interface StockCount {
   id: number;
   branch: number;
@@ -202,7 +192,55 @@ export interface Member {
   role: Role;
   branch_ids: number[];
   branch_names: string[];
+  can_approve_returns: boolean;
   is_active: boolean;
+}
+
+export type TransferStatus = "draft" | "sent" | "received" | "cancelled";
+
+export interface TransferLine { id?: number; variant: number; sku: string; variant_name: string; quantity: number }
+
+export interface Transfer {
+  id: number;
+  from_branch: number;
+  from_branch_name: string;
+  to_branch: number;
+  to_branch_name: string;
+  status: TransferStatus;
+  note: string;
+  lines: TransferLine[];
+  sent_at: string | null;
+  received_at: string | null;
+  cancelled_at: string | null;
+  created_at: string;
+}
+
+export type ReturnStatus = "pending" | "approved" | "rejected";
+
+export type ReturnKind = "defective" | "resale";
+
+/** Savdo ichidagi qisqa qaytarish yozuvi. */
+export interface SaleReturnBrief { id: number; created_at: string; kind: ReturnKind; status: ReturnStatus; refund_total: string; reason: string }
+
+export interface SaleReturn {
+  id: number;
+  created_at: string;
+  sale: number;
+  branch: number;
+  branch_name: string;
+  kind: ReturnKind;
+  kind_display: string;
+  status: ReturnStatus;
+  status_display: string;
+  reason: string;
+  refund_total: string;
+  requested_by_name: string;
+  decided_by_name: string;
+  decided_at: string | null;
+  decision_note: string;
+  lines: { id: number; sale_line: number; sku: string; variant_name: string; quantity: number; refund_amount: string }[];
+  // Faqat menejerga: qaytgan tovar tannarxi (yaroqsiz tovarda bu zarar).
+  cost_total?: string;
 }
 
 export type DiscountKind = "percent" | "fixed_price";

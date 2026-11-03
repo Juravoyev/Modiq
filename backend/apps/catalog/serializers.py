@@ -2,9 +2,15 @@ from django.db import transaction
 from rest_framework import serializers
 
 from apps.common.fields import BusinessScopedPKField
+from apps.common.serializers import HideCostFieldsMixin
 
 from .models import Brand, Category, Color, Product, ProductVariant, Season, Size
 from .services import generate_variants
+
+
+def _image_url(image):
+    # Nisbiy URL (/media/...): frontend qaysi domenda ochilmasin, o'sha domendan yuklanadi.
+    return image.url if image else None
 
 
 class UniqueNamePerBusinessMixin:
@@ -49,10 +55,13 @@ class SizeSerializer(UniqueNamePerBusinessMixin, serializers.ModelSerializer):
         fields = ["id", "name", "sort_order"]
 
 
-class VariantSerializer(serializers.ModelSerializer):
+class VariantSerializer(HideCostFieldsMixin, serializers.ModelSerializer):
+    cost_fields = ("purchase_price", "effective_purchase_price")
+
     product_name = serializers.CharField(source="product.name", read_only=True)
     color_name = serializers.CharField(source="color.name", read_only=True)
     size_name = serializers.CharField(source="size.name", read_only=True)
+    product_image = serializers.SerializerMethodField()
     effective_purchase_price = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
     effective_sale_price = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
     effective_min_stock = serializers.IntegerField(read_only=True)
@@ -62,11 +71,15 @@ class VariantSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductVariant
         fields = [
-            "id", "product", "product_name", "color", "color_name", "size", "size_name", "sku", "barcode",
+            "id", "product", "product_name", "product_image", "color", "color_name", "size", "size_name", "sku",
+            "barcode",
             "purchase_price", "sale_price", "min_stock", "is_active",
             "effective_purchase_price", "effective_sale_price", "effective_min_stock", "stock",
         ]
         read_only_fields = ["product", "color", "size"]
+
+    def get_product_image(self, obj) -> str | None:
+        return _image_url(obj.product.image)
 
     def validate_sku(self, value):
         qs = ProductVariant.objects.filter(business=self.context["request"].business, sku=value)
@@ -77,11 +90,14 @@ class VariantSerializer(serializers.ModelSerializer):
         return value
 
 
-class ProductSerializer(serializers.ModelSerializer):
+class ProductSerializer(HideCostFieldsMixin, serializers.ModelSerializer):
+    cost_fields = ("purchase_price",)
+
     category = BusinessScopedPKField(queryset=Category.objects.all(), allow_null=True, required=False)
     brand = BusinessScopedPKField(queryset=Brand.objects.all(), allow_null=True, required=False)
     season = BusinessScopedPKField(queryset=Season.objects.all(), allow_null=True, required=False)
     variants = VariantSerializer(many=True, read_only=True)
+    image = serializers.SerializerMethodField(help_text="Yuklash: POST /products/{id}/image/ (multipart)")
     total_stock = serializers.IntegerField(read_only=True, default=0,
                                            help_text="Barcha variantlar qoldig'i yig'indisi")
     # Yaratishda rang va o'lchamlar berilsa, variantlar matritsasi avtomatik yaratiladi.
@@ -94,6 +110,9 @@ class ProductSerializer(serializers.ModelSerializer):
             "id", "name", "article", "category", "brand", "season", "purchase_price", "sale_price",
             "min_stock", "image", "is_active", "total_stock", "variants", "color_ids", "size_ids",
         ]
+
+    def get_image(self, obj) -> str | None:
+        return _image_url(obj.image)
 
     def validate_article(self, value):
         qs = Product.objects.filter(business=self.context["request"].business, article__iexact=value)
@@ -121,6 +140,11 @@ class ProductSerializer(serializers.ModelSerializer):
         validated.pop("color_ids", None)
         validated.pop("size_ids", None)
         return super().update(instance, validated)
+
+
+class ProductImageSerializer(serializers.Serializer):
+    # Tekshirish va siqish servisda (Pillow) bajariladi, bu yerda faqat fayl borligi tekshiriladi.
+    image = serializers.FileField()
 
 
 class GenerateVariantsSerializer(serializers.Serializer):

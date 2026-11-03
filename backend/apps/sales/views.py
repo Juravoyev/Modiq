@@ -1,16 +1,33 @@
-from rest_framework import mixins, viewsets
-from rest_framework.decorators import action
-from rest_framework.response import Response
+from decimal import Decimal
 
-from .models import Sale
+from rest_framework import mixins, permissions, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from apps.common.permissions import IsBusinessMember, IsManager
+
+from .models import Sale, SaleReturn
 from .serializers import (
+    ReturnDecisionSerializer,
     SaleCreateSerializer,
+    SaleItemsReturnSerializer,
     SaleManagerSerializer,
     SaleReturnCreateSerializer,
+    SaleReturnManagerSerializer,
     SaleReturnSerializer,
     SaleSerializer,
 )
-from .services import LineInput, create_sale, return_sale_items
+from .reports import build_dashboard
+from .services import (
+    LineInput,
+    ReturnLineInput,
+    create_return,
+    create_sale,
+    decide_return,
+    return_sale_items,
+)
 
 
 class SaleViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,
@@ -25,15 +42,15 @@ class SaleViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Creat
         return Sale.objects.filter(
             business=self.request.business, branch__in=self.request.membership.allowed_branches()
         ).select_related("branch", "cashier").prefetch_related(
-            "lines__variant__product", "lines__variant__color", "lines__variant__size", "lines__return_lines",
-            "returns__lines__sale_line__variant",
+            "lines__variant__product", "lines__variant__color", "lines__variant__size",
+            "lines__return_lines__sale_return",
         )
 
     def get_serializer_class(self):
         if self.action == "create":
             return SaleCreateSerializer
         if self.action == "return_items":
-            return SaleReturnCreateSerializer
+            return SaleItemsReturnSerializer
         if getattr(self, "swagger_fake_view", False):
             return SaleManagerSerializer
         return SaleManagerSerializer if self.request.membership.is_manager else SaleSerializer
@@ -54,12 +71,99 @@ class SaleViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Creat
 
     @action(detail=True, methods=["post"], url_path="return")
     def return_items(self, request, pk=None):
-        """Tovarni qaytarish: qoldiq tiklanadi, summa tushumdan ayiriladi."""
+        """Sotuvga qaytadigan tovar: qoldiq tiklanadi, summa tushumdan ayiriladi."""
         sale = self.get_object()  # tenant va filial ruxsati shu yerda tekshiriladi
-        s = SaleReturnCreateSerializer(data=request.data)
+        s = SaleItemsReturnSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         sale_return = return_sale_items(
-            sale_id=sale.pk, user=request.user, reason=s.validated_data["reason"],
+            sale_id=sale.pk, user=request.user, membership=request.membership, reason=s.validated_data["reason"],
             items=[(i["sale_line"], i["quantity"]) for i in s.validated_data["lines"]],
         )
-        return Response(SaleReturnSerializer(sale_return).data, status=201)
+        out_cls = SaleReturnManagerSerializer if request.membership.is_manager else SaleReturnSerializer
+        return Response(out_cls(sale_return, context={"request": request}).data, status=201)
+
+class SaleReturnViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,
+                        viewsets.GenericViewSet):
+    """Tovar qaytarish (yaroqsiz yoki sotuvga qaytadigan). Yaroqsiz tovarda sotuvchi so'rov yaratadi, huquqi bor xodim tasdiqlaydi yoki rad etadi."""
+
+    queryset = SaleReturn.objects.none()  # API sxemasi uchun
+    filterset_fields = ["status", "kind", "branch", "sale"]
+
+    def get_queryset(self):
+        return SaleReturn.objects.filter(
+            business=self.request.business, branch__in=self.request.membership.allowed_branches()
+        ).select_related("branch", "requested_by", "decided_by").prefetch_related(
+            "lines__sale_line__variant__product", "lines__sale_line__variant__color", "lines__sale_line__variant__size"
+        )
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return SaleReturnCreateSerializer
+        if self.action in ("approve", "reject"):
+            return ReturnDecisionSerializer
+        return self._out_cls()
+
+    def _out_cls(self):
+        if getattr(self, "swagger_fake_view", False) or self.request.membership.is_manager:
+            return SaleReturnManagerSerializer
+        return SaleReturnSerializer
+
+    def _respond(self, sale_return, status=200):
+        obj = self.get_queryset().get(pk=sale_return.pk)
+        return Response(self._out_cls()(obj, context={"request": self.request}).data, status=status)
+
+    def create(self, request, *args, **kwargs):
+        s = self.get_serializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        data = s.validated_data
+        sale_return = create_return(
+            sale=data["sale"], user=request.user, membership=request.membership, reason=data["reason"],
+            lines=[ReturnLineInput(line["sale_line"], line["quantity"]) for line in data["lines"]], kind=data["kind"],
+        )
+        return self._respond(sale_return, status=201)
+
+    def _decide(self, approve):
+        sale_return = self.get_object()  # tenant va filial tekshiruvi
+        s = self.get_serializer(data=self.request.data)
+        s.is_valid(raise_exception=True)
+        decide_return(sale_return.pk, user=self.request.user, membership=self.request.membership, approve=approve,
+                      note=s.validated_data["note"])
+        return self._respond(sale_return)
+
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        return self._decide(True)
+
+    @action(detail=True, methods=["post"])
+    def reject(self, request, pk=None):
+        return self._decide(False)
+
+
+def _decimals_to_str(value):
+    # Boshqa API javoblari kabi pul summalari satr ko'rinishida qaytadi ("120000.00").
+    if isinstance(value, Decimal):
+        return f"{value:.2f}"
+    if isinstance(value, dict):
+        return {k: _decimals_to_str(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_decimals_to_str(v) for v in value]
+    return value
+
+
+class DashboardView(APIView):
+    """Egasi va menejer uchun umumiy ko'rsatkichlar. ?branch=<id> (ixtiyoriy), ?days=7|30|90."""
+
+    permission_classes = [permissions.IsAuthenticated, IsBusinessMember, IsManager]
+
+    def get(self, request):
+        branches = request.membership.allowed_branches()
+        branch_id = request.query_params.get("branch")
+        if branch_id:
+            if not branch_id.isdigit():
+                raise ValidationError({"branch": "Noto'g'ri filial."})
+            branches = branches.filter(pk=int(branch_id))
+        days = request.query_params.get("days", "30")
+        if days not in ("7", "30", "90"):
+            raise ValidationError({"days": "7, 30 yoki 90 bo'lishi kerak."})
+        data = build_dashboard(business=request.business, branches=branches, days=int(days))
+        return Response(_decimals_to_str(data))

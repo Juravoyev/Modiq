@@ -10,6 +10,9 @@ interface AuthState {
   loading: boolean;
   branch: Branch | null;
   isManager: boolean;
+  isOwner: boolean;
+  /** Filial yoki rol o'zgargandan keyin foydalanuvchi ma'lumotini qayta yuklaydi. */
+  reloadMe: () => Promise<void>;
   setBranchId: (id: number) => void;
   login: (phone: string, password: string) => Promise<void>;
   register: (data: { phone: string; password: string; full_name: string; business_name: string }) => Promise<void>;
@@ -60,6 +63,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await login(data.phone, data.password);
   }, [login]);
 
+  const reloadMe = useCallback(async () => {
+    setMe(await api<Me>("/auth/me/"));
+  }, []);
+
   const setBranchId = useCallback((id: number) => {
     localStorage.setItem(BRANCH_KEY, String(id));
     setBranchIdState(id);
@@ -69,10 +76,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const branches = me?.branches ?? [];
     const branch = branches.find((b) => b.id === branchId) ?? branches[0] ?? null;
     return {
-      me, loading, branch, setBranchId, login, register, logout,
+      me, loading, branch, setBranchId, login, register, logout, reloadMe,
       isManager: me?.role === "owner" || me?.role === "manager",
+      isOwner: me?.role === "owner",
     };
-  }, [me, loading, branchId, setBranchId, login, register, logout]);
+  }, [me, loading, branchId, setBranchId, login, register, logout, reloadMe]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

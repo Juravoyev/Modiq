@@ -50,20 +50,23 @@ Hujjat: `/api/docs/` (Swagger), sxema: `/api/schema/`.
 | `POST /api/auth/register/` | Egasi + biznes + birinchi filial |
 | `POST /api/auth/login/`, `POST /api/auth/refresh/` | JWT (telefon + parol) |
 | `GET /api/auth/me/` | Joriy foydalanuvchi, rol, filiallar |
-| `/api/auth/branches/` | Filiallar (yozish: menejer) |
-| `/api/auth/members/` | Xodimlar (faqat menejer/egasi) |
+| `/api/auth/branches/` | Filiallar (yozish: menejer). O'chirilmaydi, `is_active=false` bilan yopiladi; oxirgi faol filialni yopib bo'lmaydi |
+| `/api/auth/members/` | Xodimlar: ko'rish menejer, qo'shish va `PATCH` (rol, filiallar, holat, parol, `can_approve_returns`) faqat egasi |
 | `/api/catalog/{categories,brands,seasons,colors,sizes}/` | Ma'lumotnomalar |
 | `/api/catalog/products/` | Tovarlar; `color_ids`+`size_ids` bilan variantlar matritsasi yaratiladi; `total_stock` |
 | `POST /api/catalog/products/{id}/generate-variants/` | Yangi rang/o'lcham qo'shish |
+| `POST`/`DELETE /api/catalog/products/{id}/image/` | Tovar rasmi (multipart). WebP, eng katta tomoni 1200px gacha siqiladi |
 | `/api/catalog/variants/?search=` | Kassa qidiruvi (SKU, shtrix-kod, nom), `stock` bilan |
 | `GET /api/inventory/stock/?branch=&low=true` | Qoldiqlar, kam qolganlar |
 | `GET /api/inventory/movements/` | Ombor harakatlari tarixi |
 | `/api/inventory/receipts/` + `/confirm/`, `/cancel/` | Kirim |
 | `/api/inventory/transfers/` + `/send/`, `/receive/`, `/cancel/` | Ko'chirish |
-| `/api/sales/` | `POST` savdoni yakunlash, `GET` tarix |
-| `POST /api/sales/{id}/return/` | Tovarni qaytarish (qoldiq tiklanadi, summa proporsional qaytariladi) |
+| `/api/sales/` | `POST` savdoni yakunlash, `GET` tarix (`returned_quantity`, `returned_total`, `return_deadline` bilan) |
+| `POST /api/sales/{id}/return/` | Sotuvga qaytadigan tovar: darhol tasdiqlanadi, qoldiq tiklanadi, summa proporsional qaytariladi |
+| `/api/sales/returns/` + `/approve/`, `/reject/` | Qaytarishlar ro'yxati; yaroqsiz tovarni qaytarish (`kind=defective`, 24 soat ichida, tasdiq bilan, hisobdan chiqariladi) |
+| `GET /api/sales/dashboard/?days=7\|30\|90&branch=` | Hisobot: tushum, foyda, qaytarishlar, qoldiq qiymati, sotilmayotgan tovarlar (egasi/menejer) |
 | `/api/inventory/counts/` + `/apply/`, `/cancel/` | Inventarizatsiya: sanoq kiritiladi, tasdiqlanganda qoldiq tenglashtiriladi |
-| `PATCH /api/auth/members/{id}/` | Xodim roli, filiallari, faolligi, paroli |
+| `PATCH /api/auth/members/{id}/` | Xodim roli, filiallari, faolligi, paroli, qaytarishni tasdiqlash huquqi |
 | `GET /api/insights/risks/?branch=&type=&level=` | Xavfli variantlar, har birida `reason` va `action` |
 | `GET/PATCH /api/insights/settings/` | Xavf qoidalari chegaralari |
 | `GET /api/reports/dashboard/?branch=` | Bugungi tushum, savdolar, qoldiq, kam qolganlar, ogohlantirishlar, `formulas` |
@@ -77,10 +80,10 @@ Hujjat: `/api/docs/` (Swagger), sxema: `/api/schema/`.
 
 1. ✅ Backend yadrosi: auth, filiallar, katalog, kirim, qoldiq, ko'chirish, savdo + testlar.
 2. ✅ Frontend skeleti: Vite + React + TS, login/ro'yxatdan o'tish, layout (desktop yon menyu, mobil pastki menyu), Kassa, Tovarlar, Kirim, Qoldiq, Savdolar.
-3. ✅ Ko'chirish sahifasi, xodimlar va filiallar (Sozlamalar), tovarni tahrirlash.
-4. ✅ Inventarizatsiya, savdoni qaytarish.
+3. ✅ Ko'chirish sahifasi, xodimlar va filiallar sahifasi, tovarni tahrirlash, mahsulot rasmlari.
+4. ✅ Inventarizatsiya. Savdoni qaytarish: sotuvga qaytadigan tovar (qoldiq tiklanadi) va yaroqsiz tovar (24 soat, tasdiqlash huquqi, hisobdan chiqarish).
 5. ✅ Aqlli tavsiyalar: 4 qoida + "Nega bu tavsiya berildi?" izohi, sozlanadigan chegaralar.
-6. ✅ Dashboard (formulalar bilan). Namunaviy ma'lumot: `python manage.py seed_demo`.
+6. ✅ Dashboard (formulalar bilan) va davr bo'yicha hisobot (tushum, foyda, qaytarishlar, qoldiq qiymati, sotilmayotgan tovarlar). Namunaviy ma'lumot: `python manage.py seed_demo` yoki taqdimot uchun `python manage.py seed_presentation`.
 7. ✅ Chegirma boshqaruvi (muddatli, tasdiqlash bilan, tarix, natijani kuzatish).
 8. ✅ Hisobotlar: kunlik/haftalik/oylik savdo, mahsulotlar bo'yicha, qoldiq, kam sotiladigan, mavsumiy; CSV, PDF (chop etish orqali).
 9. Production (oxirida): Nginx, HTTPS, backup, CI.
@@ -97,14 +100,15 @@ Hujjat: `/api/docs/` (Swagger), sxema: `/api/schema/`.
 | 5 | Ko'chirish to'g'ri ishlaydi (ikki marta jo'natish/qabul yo'q, bekor qilish qaytaradi) | ✅ |
 | 6 | Bir biznes boshqasining ma'lumotini ko'ra/ishlata olmaydi | ✅ `TenantIsolationTests` |
 | 7 | Chegirma va narx hisob-kitobi, tannarxdan past narx | ✅ `sales/tests`, `discounts/tests` |
-| 8 | Dashboard va hisobot raqamlari haqiqiy savdo va qaytarishlarga mos, CSV | ✅ `reports/tests` |
-| 9 | Qaytarish: sotilganidan ko'p qaytarib bo'lmaydi, summa proporsional | ✅ `sales/tests/test_returns.py` |
+| 8 | Dashboard va hisobot raqamlari haqiqiy savdo va qaytarishlarga mos, CSV | ✅ `reports/tests`, `sales/tests/test_dashboard.py` |
+| 9 | Qaytarish: sotilganidan ko'p qaytarib bo'lmaydi, summa proporsional; yaroqsiz tovar: muddat, tasdiqlash huquqi, qoldiqqa qaytmaydi | ✅ `sales/tests/test_returns.py` |
 | 10 | Inventarizatsiya ikki marta qo'llanmaydi, farq jurnalga yoziladi | ✅ `inventory/tests/test_stock_count.py` |
 | 11 | Xavf qoidalari: chegara, sozlash, ma'lumot yetarli bo'lmaganda sur'at yo'q | ✅ `insights/tests` |
 | 12 | Demo ma'lumotda qoldiq = jurnal yig'indisi | ✅ `accounts/tests/test_seed_demo.py` |
 | 13 | Chegirma: ustma-ust tushmaydi, muddati o'tgani qo'llanmaydi, kassir tasdiqlay olmaydi | ✅ `discounts/tests` |
 | 14 | Katalog yuqori modullarga bog'liq emas | ✅ `catalog/tests/test_dependencies.py` |
 | 15 | Haftalik xulosa: faktlar haqiqiy savdodan, kalitsiz/xatoda tushunarli javob, kalit URL da emas | ✅ `reports/tests/test_summary.py` |
+| 16 | Xodim va filial boshqaruvi huquqlari | ✅ `accounts/tests/test_staff_branches.py` |
 
 ## 6. Frontend tuzilishi (`frontend/src/`)
 
@@ -114,7 +118,7 @@ Hujjat: `/api/docs/` (Swagger), sxema: `/api/schema/`.
 | `api/types.ts` | Backend javoblari turlari |
 | `auth/AuthContext.tsx` | Joriy foydalanuvchi, tanlangan filial, login/logout |
 | `components/` | Layout, Logo (izometrik kub), Receipt (chek), umumiy UI (Loading, Empty, ErrorBox, Field, Pagination, StockBadge) |
-| `pages/` | Login, Register, Kassa, Tovarlar, Yangi tovar, Kirim, Qoldiq, Savdolar |
+| `pages/` | Login, Register, Kassa, Hisobot, Tovarlar, Yangi tovar, Tovarni tahrirlash, Kirim, Ko'chirish, Qoldiq, Savdolar, Qaytarish, Xodimlar, Filiallar, "Yana" (telefon menyusi) |
 | `styles/global.css` | Dizayn tokenlari va komponent klasslari |
 
 Qo'shimcha kutubxona faqat `react-router-dom` (sahifalar orasida yurish). Holat boshqaruvi uchun alohida kutubxona ishlatilmagan.

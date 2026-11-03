@@ -27,6 +27,8 @@ OWNER_PHONE = "+998900000001"
 CASHIER_PHONE = "+998900000002"
 PASSWORD = "Demo-parol-2026"
 DEMO_NAME = "Modiq Demo do'koni"
+# seed_demo va seed_presentation bir xil telefon raqamlardan foydalanadi: --reset ikkalasining do'konini ham o'chiradi.
+DEMO_NAMES = (DEMO_NAME, "Moda Uz")
 
 # (nom, artikul, kategoriya, brend, mavsum, xarid, sotuv, ranglar, o'lchamlar, kirim har variantga, mashhurlik 0..1)
 PRODUCTS = [
@@ -65,6 +67,28 @@ def _shift(qs, days_ago, rnd):
     return when
 
 
+@transaction.atomic
+def delete_demo_business(biz):
+    """Demo do'konni o'chiradi. Demo bo'lmagan biznesga tegmaydi."""
+    if biz.name not in DEMO_NAMES:
+        raise CommandError(f"{OWNER_PHONE} demo bo'lmagan biznesga tegishli, hech narsa o'chirilmadi.")
+    # PROTECT bog'lanishlar sababli tartib bilan o'chiriladi. Faqat demo biznes ma'lumotlari.
+    SaleReturn.objects.filter(business=biz).delete()
+    Sale.objects.filter(business=biz).delete()
+    Discount.objects.filter(business=biz).delete()
+    Receipt.objects.filter(business=biz).delete()
+    Transfer.objects.filter(business=biz).delete()
+    StockCount.objects.filter(business=biz).delete()
+    StockMovement.objects.filter(business=biz).delete()
+    Stock.objects.filter(business=biz).delete()
+    ProductVariant.objects.filter(business=biz).delete()
+    Product.objects.filter(business=biz).delete()
+    for model in (Color, Size, Category, Brand, Season):
+        model.objects.filter(business=biz).delete()
+    User.objects.filter(membership__business=biz).delete()
+    biz.delete()
+
+
 class Command(BaseCommand):
     help = "Namunaviy (demo) do'kon ma'lumotlarini yaratadi."
 
@@ -76,34 +100,13 @@ class Command(BaseCommand):
         if existing:
             if not opts["reset"]:
                 raise CommandError("Demo do'kon allaqachon bor. Qaytadan yaratish uchun: python manage.py seed_demo --reset")
-            biz = existing.membership.business
-            if biz.name != DEMO_NAME:
-                raise CommandError(f"{OWNER_PHONE} demo bo'lmagan biznesga tegishli, hech narsa o'chirilmadi.")
-            self._delete_demo(biz)
+            delete_demo_business(existing.membership.business)
         rnd = random.Random(42)
         with transaction.atomic():
             self._create(rnd)
         self.stdout.write(self.style.SUCCESS("Demo do'kon yaratildi."))
         self.stdout.write(f"  Egasi:    {OWNER_PHONE} / {PASSWORD}")
         self.stdout.write(f"  Sotuvchi: {CASHIER_PHONE} / {PASSWORD}")
-
-    @transaction.atomic
-    def _delete_demo(self, biz):
-        # PROTECT bog'lanishlar sababli tartib bilan o'chiriladi. Faqat demo biznes ma'lumotlari.
-        SaleReturn.objects.filter(business=biz).delete()
-        Sale.objects.filter(business=biz).delete()
-        Discount.objects.filter(business=biz).delete()
-        Receipt.objects.filter(business=biz).delete()
-        Transfer.objects.filter(business=biz).delete()
-        StockCount.objects.filter(business=biz).delete()
-        StockMovement.objects.filter(business=biz).delete()
-        Stock.objects.filter(business=biz).delete()
-        ProductVariant.objects.filter(business=biz).delete()
-        Product.objects.filter(business=biz).delete()
-        for model in (Color, Size, Category, Brand, Season):
-            model.objects.filter(business=biz).delete()
-        User.objects.filter(membership__business=biz).delete()
-        biz.delete()
 
     def _create(self, rnd):
         biz = Business.objects.create(name=DEMO_NAME, phone=OWNER_PHONE, address="Toshkent (demo)")
@@ -194,7 +197,8 @@ class Command(BaseCommand):
         # 3) Bir nechta qaytarish va ombordan do'konga ko'chirish
         for sale in Sale.objects.filter(business=biz).order_by("?")[:4]:
             line = sale.lines.first()
-            ret = return_sale_items(sale_id=sale.id, user=owner, items=[(line.id, 1)], reason="O'lcham to'g'ri kelmadi")
+            ret = return_sale_items(sale_id=sale.id, user=owner, membership=owner_m, items=[(line.id, 1)],
+                                   reason="O'lcham to'g'ri kelmadi")
             when = sale.created_at + timedelta(days=1)
             SaleReturn.objects.filter(pk=ret.pk).update(created_at=when)
             StockMovement.objects.filter(ref_type="salereturn", ref_id=ret.pk).update(created_at=when)

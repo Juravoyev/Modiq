@@ -58,6 +58,22 @@ Brauzerda http://localhost:5173 oching. Dev rejimida `/api` so'rovlari avtomatik
 
 Sinab ko'rish tartibi: demo do'kon bilan kiring yoki ro'yxatdan o'ting → Bosh sahifa → Aqlli tavsiyalar → Chegirmalar → Kassa → Savdolar (qaytarish) → Hisobotlar (CSV, chop etish) → Ko'chirish → Inventarizatsiya → Sozlamalar.
 
+## Demo ma'lumotlar
+
+Taqdimot uchun tayyor do'kon (3 filial, 4 xodim, 10 tovar, 30 kunlik savdo, qaytarishlar):
+
+```bash
+cd backend
+python manage.py seed_presentation  # qayta yaratish: seed_presentation --reset
+```
+
+Kirish: `+998 90 000 00 01` (egasi), `...02` (menejer), `...03` va `...04` (sotuvchilar), parol `Demo-12345`.
+
+Ikkala buyruq bir xil telefon raqamlardan foydalanadi, shuning uchun bir vaqtda faqat bittasi turadi:
+`--reset` boshqasining demo do'konini ham o'chiradi (demo bo'lmagan do'konga tegmaydi).
+
+Taqdimot ssenariysi: [docs/DEMO.md](docs/DEMO.md).
+
 ## Testlar
 
 ```bash

@@ -2,7 +2,7 @@
 from datetime import datetime, time, timedelta
 from decimal import Decimal
 
-from django.db.models import Count, DecimalField, ExpressionWrapper, F, Sum, Value
+from django.db.models import Count, DecimalField, ExpressionWrapper, F, Q, Sum, Value
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
@@ -14,10 +14,11 @@ ZERO = Decimal("0.00")
 MONEY = DecimalField(max_digits=16, decimal_places=2)
 
 FORMULAS = {
-    "revenue": "Tushum = bugungi savdolar yakuniy summasi (chegirmadan keyin) − bugun qaytarilgan summa",
+    "revenue": "Tushum = bugungi savdolar yakuniy summasi (chegirmadan keyin) − bugun tasdiqlangan qaytarishlar summasi",
     "sales_count": "Savdolar soni = bugun yakunlangan cheklar soni",
     "items_sold": "Sotilgan dona = bugungi savdo qatorlaridagi miqdorlar yig'indisi",
-    "gross_profit": "Taxminiy yalpi foyda = tushum − sotilgan tovar tannarxi (qaytgan tovar tannarxi chiqarilgan). "
+    "gross_profit": "Taxminiy yalpi foyda = tushum − sotilgan tovar tannarxi (sotuvga qaytgan tovar tannarxi chiqarilgan, "
+                    "yaroqsiz tovar tannarxi zarar sifatida qoldirilgan). "
                     "Ijara, maosh va boshqa xarajatlar hisobga olinmagan, bu sof foyda emas",
     "stock_units": "Umumiy qoldiq = tanlangan filiallardagi barcha variantlar qoldig'i yig'indisi (dona)",
     "stock_value": "Qoldiq qiymati = har bir variant qoldig'i × xarid narxi",
@@ -35,10 +36,11 @@ def _day_range(day):
 def dashboard(business, branches, is_manager: bool, donor_branches=None):
     start, end = _day_range(timezone.localdate())
     sales = Sale.objects.filter(business=business, branch__in=branches, created_at__gte=start, created_at__lt=end)
-    returns = SaleReturn.objects.filter(business=business, branch__in=branches, created_at__gte=start,
-                                        created_at__lt=end)
+    returns = SaleReturn.objects.filter(business=business, branch__in=branches, status=SaleReturn.Status.APPROVED,
+                                        created_at__gte=start, created_at__lt=end)
     s = sales.aggregate(total=Coalesce(Sum("total"), ZERO), cost=Coalesce(Sum("cost_total"), ZERO), n=Count("id"))
-    r = returns.aggregate(total=Coalesce(Sum("refund_total"), ZERO), cost=Coalesce(Sum("cost_total"), ZERO))
+    r = returns.aggregate(total=Coalesce(Sum("refund_total"), ZERO),
+                          cost=Coalesce(Sum("cost_total", filter=Q(kind=SaleReturn.Kind.RESALE)), ZERO))
     items = SaleLine.objects.filter(sale__in=sales).aggregate(q=Coalesce(Sum("quantity"), 0))["q"]
 
     stocks = Stock.objects.filter(business=business, branch__in=branches, variant__is_active=True)

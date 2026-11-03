@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api, qs } from "../api/client";
 import type { Dashboard } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
+import { PeriodReport } from "../components/PeriodReport";
 import { RiskBadge } from "../components/StatusBadge";
 import { ErrorBox, Loading } from "../components/ui";
 import { WeeklySummaryCard } from "../components/WeeklySummaryCard";
@@ -86,6 +87,8 @@ export function DashboardPage() {
           </div>
         </div>
       </div>
+      {isManager && <PeriodReport />}
+
       <p className="muted">ⓘ belgisi ustiga kursor olib borsangiz, ko'rsatkich qanday hisoblanishi ko'rinadi.</p>
     </div>
   );

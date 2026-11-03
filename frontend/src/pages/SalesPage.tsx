@@ -1,63 +1,19 @@
 import { useState } from "react";
 
 import { api, qs } from "../api/client";
-import type { Page, Sale } from "../api/types";
+import type { Page, ReturnKind, Sale } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
 import { Receipt } from "../components/Receipt";
-import { Empty, ErrorBox, Field, Loading, Pagination, Success } from "../components/ui";
+import { Empty, ErrorBox, Loading, Pagination, Success } from "../components/ui";
 import { dateTime, money } from "../utils/format";
 import { useAsync } from "../utils/useAsync";
-
-function ReturnForm({ sale, onDone }: { sale: Sale; onDone: (updated: Sale) => void }) {
-  const [qty, setQty] = useState<Record<number, string>>({});
-  const [reason, setReason] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const lines = sale.lines.filter((l) => l.quantity - l.returned_quantity > 0);
-
-  async function submit() {
-    const items = Object.entries(qty).filter(([, q]) => Number(q) > 0).map(([id, q]) => ({ sale_line: Number(id), quantity: Number(q) }));
-    if (!items.length) return setError("Qaytariladigan miqdorni kiriting.");
-    setBusy(true);
-    setError(null);
-    try {
-      await api(`/sales/${sale.id}/return/`, { method: "POST", body: { lines: items, reason } });
-      onDone(await api<Sale>(`/sales/${sale.id}/`));
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  if (!lines.length) return <p className="muted">Bu savdodagi barcha tovarlar qaytarilgan.</p>;
-  return (
-    <div className="card stack no-print">
-      <h2 style={{ margin: 0 }}>Tovarni qaytarish</h2>
-      {error && <ErrorBox message={error} />}
-      {lines.map((l) => {
-        const left = l.quantity - l.returned_quantity;
-        return (
-          <div key={l.id} className="spread">
-            <span>{l.variant_name}<div className="muted">Qaytarish mumkin: {left} dona · 1 dona = {money(Number(l.line_total) / l.quantity)}</div></span>
-            <input className="input" style={{ width: 80 }} inputMode="numeric" placeholder="0" value={qty[l.id] ?? ""}
-                   aria-label={`${l.sku} qaytariladigan miqdor`}
-                   onChange={(e) => setQty({ ...qty, [l.id]: String(Math.min(left, Number(e.target.value.replace(/\D/g, "")) || 0) || "") })} />
-          </div>
-        );
-      })}
-      <Field label="Sabab"><input className="input" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Masalan: o'lcham to'g'ri kelmadi" /></Field>
-      <button className="btn btn-primary" disabled={busy} onClick={submit}>{busy ? "Bajarilmoqda..." : "Qaytarishni tasdiqlash"}</button>
-      <p className="muted" style={{ margin: 0 }}>Qaytarilgan tovar qoldiqqa qo'shiladi, summasi bugungi tushumdan ayiriladi.</p>
-    </div>
-  );
-}
+import { ReturnForm } from "./ReturnsPage";
 
 export function SalesPage() {
   const { branch, me, isManager } = useAuth();
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Sale | null>(null);
-  const [returning, setReturning] = useState(false);
+  const [returning, setReturning] = useState<ReturnKind | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const { data, error, loading, reload } = useAsync(
     () => api<Page<Sale>>(`/sales/${qs({ branch: branch?.id, page })}`),
@@ -65,26 +21,52 @@ export function SalesPage() {
   );
 
   if (selected) {
+    const hasLeft = selected.lines.some((l) => l.quantity > l.returned_quantity);
+    // Yaroqsiz tovar faqat 24 soat ichida qaytariladi; yaroqli tovar uchun muddat yo'q.
+    const canReturnDefective = new Date(selected.return_deadline) > new Date();
     return (
       <div className="stack" style={{ maxWidth: 420, margin: "0 auto" }}>
-        <button className="btn btn-secondary no-print" onClick={() => { setSelected(null); setReturning(false); setNotice(null); reload(); }}>‹ Savdolar ro'yxati</button>
-        {notice && <Success>{notice}</Success>}
+        <button className="btn btn-secondary no-print" onClick={() => { setSelected(null); setReturning(null); setNotice(null); reload(); }}>
+          ‹ Savdolar ro'yxati
+        </button>
+        {notice && <div className="no-print"><Success>{notice}</Success></div>}
         <div className="card"><Receipt sale={selected} businessName={me?.business.name ?? ""} /></div>
         {selected.returns.length > 0 && (
           <div className="card no-print">
             <h3>Qaytarishlar</h3>
             {selected.returns.map((r) => (
               <div key={r.id} className="list-row">
-                <span>{dateTime(r.created_at)}{r.reason && <div className="muted">{r.reason}</div>}</span>
-                <b className="num">−{money(r.refund_total)}</b>
+                <span>{dateTime(r.created_at)} · {r.kind === "resale" ? "Qoldiqqa qaytdi" : "Yaroqsiz"}
+                  {r.reason && <div className="muted">{r.reason}</div>}</span>
+                <span className="right">
+                  <b className="num">−{money(r.refund_total)}</b>
+                  {r.status !== "approved" && <div className="muted">{r.status === "pending" ? "Tasdiq kutilmoqda" : "Rad etilgan"}</div>}
+                </span>
               </div>
             ))}
           </div>
         )}
         {returning ? (
-          <ReturnForm sale={selected} onDone={(s) => { setSelected(s); setReturning(false); setNotice("Qaytarish bajarildi, qoldiq tiklandi."); }} />
-        ) : (
-          <button className="btn btn-secondary no-print" onClick={() => setReturning(true)}>↩ Tovarni qaytarish</button>
+          <ReturnForm sale={selected} kind={returning} onCancel={() => setReturning(null)} onDone={async (r) => {
+            setReturning(null);
+            setNotice(r.kind === "resale"
+              ? `Qaytarish bajarildi, tovar qoldiqqa qaytdi. Mijozga ${money(r.refund_total)} qaytaring.`
+              : r.status === "approved"
+                ? `Qaytarish tasdiqlandi. Mijozga ${money(r.refund_total)} qaytaring.`
+                : "So'rov yuborildi. Mas'ul xodim tasdiqlagach, mijozga pulni qaytaring (\"Qaytarish\" bo'limi).");
+            setSelected(await api<Sale>(`/sales/${selected.id}/`));
+          }} />
+        ) : hasLeft && (
+          <div className="row no-print">
+            <button className="btn btn-secondary" onClick={() => { setReturning("resale"); setNotice(null); }}>
+              ↩ Tovarni qaytarish
+            </button>
+            {canReturnDefective && (
+              <button className="btn btn-secondary" onClick={() => { setReturning("defective"); setNotice(null); }}>
+                ↩ Yaroqsiz tovarni qaytarish
+              </button>
+            )}
+          </div>
         )}
         {isManager && selected.gross_profit !== undefined && (
           <div className="card no-print">

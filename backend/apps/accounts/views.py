@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from apps.common.permissions import IsBusinessMember, IsManager, IsManagerOrReadOnly
+from apps.common.permissions import IsBusinessMember, IsManagerOrReadOnly, IsOwnerOrReadOnly
 from apps.common.views import BusinessScopedViewSet
 
 from .models import Branch, Membership
@@ -47,16 +47,25 @@ class BranchViewSet(BusinessScopedViewSet):
     serializer_class = BranchSerializer
     permission_classes = [permissions.IsAuthenticated, IsBusinessMember, IsManagerOrReadOnly]
     queryset = Branch.objects.all()
+    # Filial o'chirilmaydi (savdo va qoldiq tarixi bor), faqat nofaol qilinadi.
+    http_method_names = ["get", "post", "patch", "head", "options"]
 
     def get_queryset(self):
+        if self.request.membership.is_manager:
+            # Menejer nofaol filiallarni ham ko'radi, aks holda ularni qayta faollashtirib bo'lmaydi.
+            return super().get_queryset()
         return self.request.membership.allowed_branches()
 
 
 class MemberViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.RetrieveModelMixin,
                     mixins.UpdateModelMixin, viewsets.GenericViewSet):
     serializer_class = MemberSerializer
-    permission_classes = [permissions.IsAuthenticated, IsBusinessMember, IsManager]
-    queryset = Membership.objects.select_related("user").prefetch_related("branches")
+    permission_classes = [permissions.IsAuthenticated, IsBusinessMember, IsOwnerOrReadOnly]
+    queryset = Membership.objects.select_related("user").prefetch_related("branches").order_by("id")
+    http_method_names = ["get", "post", "patch", "head", "options"]
+
+    def get_serializer_class(self):
+        return MemberUpdateSerializer if self.action == "partial_update" else MemberSerializer
 
     def get_serializer_class(self):
         if self.action in ("update", "partial_update"):

@@ -1,14 +1,15 @@
 import { Fragment, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import { api, qs } from "../api/client";
 import type { Page, Product } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
-import { Empty, ErrorBox, Loading, Pagination, StockBadge } from "../components/ui";
+import { Empty, ErrorBox, Loading, Pagination, ProductThumb, StockBadge } from "../components/ui";
 import { money } from "../utils/format";
 import { useAsync, useDebounced } from "../utils/useAsync";
 
 export function ProductsPage() {
+  const notice = (useLocation().state as { notice?: string } | null)?.notice;
   const { branch, isManager } = useAuth();
   const [query, setQuery] = useState("");
   const search = useDebounced(query.trim());
@@ -26,6 +27,7 @@ export function ProductsPage() {
         <h1 style={{ margin: 0 }}>Tovarlar</h1>
         {isManager && <Link className="btn btn-primary" to="/products/new">+ Yangi tovar</Link>}
       </div>
+      {notice && <div className="alert alert-warn"><span aria-hidden="true">▲</span> {notice}</div>}
       <input className="input" type="search" placeholder="Nomi, artikul yoki SKU" value={query}
              onChange={(e) => { setQuery(e.target.value); setPage(1); }} aria-label="Qidirish" />
       <div className="card" style={{ padding: 0 }}>
@@ -44,8 +46,14 @@ export function ProductsPage() {
                   {data.results.map((p) => (
                     <Fragment key={p.id}>
                       <tr style={{ cursor: "pointer" }} onClick={() => setOpen(open === p.id ? null : p.id)}>
-                        <td><span aria-hidden="true">{open === p.id ? "▾" : "▸"}</span> <b>{p.name}</b>
-                          {!p.is_active && <span className="badge badge-neutral" style={{ marginLeft: 6 }}>Nofaol</span>}</td>
+                        <td>
+                          <div className="row" style={{ gap: 10, flexWrap: "nowrap" }}>
+                            <span aria-hidden="true">{open === p.id ? "▾" : "▸"}</span>
+                            <ProductThumb src={p.image} alt={p.name} />
+                            <span><b>{p.name}</b>
+                              {!p.is_active && <span className="badge badge-neutral" style={{ marginLeft: 6 }}>Nofaol</span>}</span>
+                          </div>
+                        </td>
                         <td>{p.article}</td>
                         <td className="right num">{money(p.sale_price)}</td>
                         <td className="right num">{p.total_stock}</td>
@@ -56,6 +64,11 @@ export function ProductsPage() {
                       {open === p.id && (
                         <tr>
                           <td colSpan={5} style={{ background: "var(--bg)" }}>
+                            {isManager && (
+                              <div style={{ marginBottom: 12 }}>
+                                <Link className="btn btn-secondary btn-sm" to={`/products/${p.id}/edit`}>✎ Tahrirlash</Link>
+                              </div>
+                            )}
                             {p.variants.length === 0 ? <span className="muted">Variantlar yo'q</span> : (
                               <table className="table">
                                 <thead><tr><th>SKU</th><th>Rang</th><th>O'lcham</th><th className="right">Narx</th><th className="right">Qoldiq</th><th>Holat</th></tr></thead>

@@ -7,7 +7,7 @@ from collections import defaultdict
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
-from django.db.models import Count, DecimalField, ExpressionWrapper, F, Sum
+from django.db.models import Count, DecimalField, ExpressionWrapper, F, Q, Sum
 from django.db.models.functions import Coalesce, TruncDay, TruncMonth, TruncWeek
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
@@ -21,6 +21,11 @@ MONEY = DecimalField(max_digits=16, decimal_places=2)
 MAX_DAYS = 400
 GROUPS = {"day": (TruncDay, 30), "week": (TruncWeek, 84), "month": (TruncMonth, 365)}
 GP_NOTE = "Taxminiy yalpi foyda = tushum − tannarx. Ijara, maosh va boshqa xarajatlar hisobga olinmagan, bu sof foyda emas."
+RETURN_NOTE = ("Faqat tasdiqlangan qaytarishlar hisobga olinadi. Sotuvga qaytgan tovar tannarxi tannarxdan ayiriladi, "
+               "yaroqsiz tovar tannarxi zarar sifatida tannarxda qoladi.")
+APPROVED = SaleReturn.Status.APPROVED
+# Faqat sotuvga qaytgan tovar tannarxi tannarxdan ayiriladi; yaroqsiz tovar hisobdan chiqariladi (zarar).
+RESALE_LINE = Q(sale_return__kind=SaleReturn.Kind.RESALE)
 
 
 def _col(key, label, kind="text"):
@@ -71,14 +76,14 @@ def sales_report(business, branches, params):
     date_from, date_to = parse_range(params, default_days)
     start, end = _bounds(date_from, date_to)
     sales = Sale.objects.filter(business=business, branch__in=branches, created_at__gte=start, created_at__lt=end)
-    returns = SaleReturn.objects.filter(business=business, branch__in=branches, created_at__gte=start,
-                                        created_at__lt=end)
+    returns = SaleReturn.objects.filter(business=business, branch__in=branches, status=APPROVED,
+                                        created_at__gte=start, created_at__lt=end)
     by_sale = {r["p"].date(): r for r in sales.annotate(p=trunc("created_at")).values("p").annotate(
         n=Count("id"), total=Sum("total"), cost=Sum("cost_total"))}
     by_items = {r["p"].date(): r["q"] for r in SaleLine.objects.filter(sale__in=sales)
                 .annotate(p=trunc("sale__created_at")).values("p").annotate(q=Sum("quantity"))}
     by_ret = {r["p"].date(): r for r in returns.annotate(p=trunc("created_at")).values("p").annotate(
-        refund=Sum("refund_total"), cost=Sum("cost_total"))}
+        refund=Sum("refund_total"), cost=Sum("cost_total", filter=Q(kind=SaleReturn.Kind.RESALE)))}
 
     rows, totals = [], defaultdict(int)
     for k in _period_keys(group, date_from, date_to):
@@ -105,7 +110,7 @@ def sales_report(business, branches, params):
                     _col("revenue", "Tushum", "money"), _col("cost", "Tannarx", "money"),
                     _col("gross_profit", "Taxminiy yalpi foyda", "money"), _col("avg_check", "O'rtacha chek", "money")],
         "rows": rows, "totals": totals,
-        "formulas": ["Tushum = savdo summasi (chegirmalardan keyin) − qaytarilgan summa", GP_NOTE],
+        "formulas": ["Tushum = savdo summasi (chegirmalardan keyin) − qaytarilgan summa", GP_NOTE, RETURN_NOTE],
     }
 
 
@@ -118,10 +123,12 @@ def products_report(business, branches, params):
                         "variant__size__name")
            .annotate(qty=Sum("quantity"), revenue=Sum("line_total"),
                      cost=Sum(ExpressionWrapper(F("unit_cost") * F("quantity"), output_field=MONEY))))
-    ret = {r["sale_line__variant"]: r for r in SaleReturnLine.objects.filter(sale_line__in=lines)
+    ret = {r["sale_line__variant"]: r for r in SaleReturnLine.objects.filter(sale_line__in=lines,
+                                                                           sale_return__status=APPROVED)
            .values("sale_line__variant").annotate(
                qty=Sum("quantity"), refund=Sum("refund_amount"),
-               cost=Sum(ExpressionWrapper(F("sale_line__unit_cost") * F("quantity"), output_field=MONEY)))}
+               cost=Sum(ExpressionWrapper(F("sale_line__unit_cost") * F("quantity"), output_field=MONEY),
+                        filter=RESALE_LINE))}
     rows = []
     for a in agg:
         r = ret.get(a["variant"], {})
@@ -239,9 +246,10 @@ def discount_results(discount, today=None):
         a = lines.aggregate(qty=Coalesce(Sum("quantity"), 0), revenue=Coalesce(Sum("line_total"), ZERO),
                             cost=Coalesce(Sum(ExpressionWrapper(F("unit_cost") * F("quantity"), output_field=MONEY)),
                                           ZERO))
-        r = SaleReturnLine.objects.filter(sale_line__in=lines).aggregate(
+        r = SaleReturnLine.objects.filter(sale_line__in=lines, sale_return__status=APPROVED).aggregate(
             qty=Coalesce(Sum("quantity"), 0), refund=Coalesce(Sum("refund_amount"), ZERO),
-            cost=Coalesce(Sum(ExpressionWrapper(F("sale_line__unit_cost") * F("quantity"), output_field=MONEY)), ZERO))
+            cost=Coalesce(Sum(ExpressionWrapper(F("sale_line__unit_cost") * F("quantity"), output_field=MONEY),
+                              filter=RESALE_LINE), ZERO))
         qty = a["qty"] - r["qty"]
         revenue = a["revenue"] - r["refund"]
         return {"from": d_from, "to": d_to, "quantity": qty, "revenue": revenue,
