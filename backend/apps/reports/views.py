@@ -11,6 +11,7 @@ from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import permissions
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from apps.common.permissions import IsBusinessMember, IsManager
@@ -89,6 +90,10 @@ class WeeklySummaryView(APIView):
     """Haftalik xulosa. GET: hisoblangan faktlar. POST: shu faktlardan qisqa matn (1 soat keshlanadi)."""
 
     permission_classes = MANAGER
+    throttle_scope = "summary"
+
+    def get_throttles(self):
+        return [ScopedRateThrottle()] if self.request.method == "POST" else []
 
     def _facts(self, request):
         return weekly_facts(request.business, selected_branches(request),

@@ -75,7 +75,7 @@ def _send(req, attempts=2):
     """Xizmat vaqtincha band (503) yoki javob kechiksa, bir marta qayta urinadi."""
     for attempt in range(attempts):
         try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
+            with urllib.request.urlopen(req, timeout=25) as resp:
                 return json.loads(resp.read())
         except urllib.error.HTTPError as e:
             if e.code != 503 or attempt == attempts - 1:
@@ -94,7 +94,8 @@ def generate_text(facts) -> str:
     body = {
         "systemInstruction": {"parts": [{"text": SYSTEM}]},
         "contents": [{"role": "user", "parts": [{"text": json.dumps(facts, ensure_ascii=False)}]}],
-        "generationConfig": {"temperature": 0.2, "maxOutputTokens": 800},
+        # Yangi modellar javobdan oldin "o'ylash"ga ham token sarflaydi, shuning uchun limit katta.
+        "generationConfig": {"temperature": 0.2, "maxOutputTokens": 4096},
     }
     req = urllib.request.Request(
         GEMINI_URL.format(model=settings.GEMINI_MODEL), data=json.dumps(body).encode(), method="POST",
@@ -115,10 +116,15 @@ def generate_text(facts) -> str:
         log.warning("Gemini ulanish xatosi: %s", type(e).__name__)
         raise SummaryUnavailable("Xulosa xizmatiga ulanib bo'lmadi. Internetni tekshiring.", "network") from e
     try:
-        parts = data["candidates"][0]["content"]["parts"]
-        text = "".join(p.get("text", "") for p in parts).strip()
+        candidate = data["candidates"][0]
+        parts = candidate["content"]["parts"]
+        text = "".join(p.get("text", "") for p in parts if not p.get("thought")).strip()
     except (KeyError, IndexError, TypeError):
-        text = ""
+        candidate, text = {}, ""
+    if candidate.get("finishReason") == "MAX_TOKENS":
+        # Chala matnni ko'rsatmaymiz va keshlamaymiz.
+        raise SummaryUnavailable("Xulosa matni to'liq chiqmadi (javob uzunligi limiti). Qayta urinib ko'ring.",
+                                 "truncated")
     if not text:
         raise SummaryUnavailable("Xulosa xizmati bo'sh javob qaytardi.", "empty")
     return text

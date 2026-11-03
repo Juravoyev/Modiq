@@ -109,6 +109,8 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 25,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "COERCE_DECIMAL_TO_STRING": True,
+    # Parolni taxmin qilib ko'rish va spamdan himoya. Kesh har bir jarayonda alohida (production'da Redis tavsiya).
+    "DEFAULT_THROTTLE_RATES": {"login": "10/min", "register": "5/hour", "summary": "20/hour"},
 }
 
 SIMPLE_JWT = {
@@ -122,19 +124,28 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Kiyim do'konlari uchun tovar, ombor va savdo tizimi",
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    "ENUM_NAME_OVERRIDES": {
+        "BranchKindEnum": "apps.accounts.models.Branch.Kind",
+        "DiscountKindEnum": "apps.discounts.models.Discount.Kind",
+        "MovementKindEnum": "apps.inventory.models.StockMovement.Kind",
+    },
 }
 
 CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
 
 # Haftalik xulosa (ixtiyoriy). Kalit bo'lmasa, xulosa tugmasi "sozlanmagan" deb javob beradi.
 GEMINI_API_KEY = env("GEMINI_API_KEY", default="")
-GEMINI_MODEL = env("GEMINI_MODEL", default="gemini-3.8-flash")
+GEMINI_MODEL = env("GEMINI_MODEL", default="gemini-3.6-flash")
 
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
+    # HTTPS sozlangandan keyin .env da yoqiladi (HSTS ni ehtiyotkorlik bilan: avval kichik qiymat).
+    SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=False)
+    SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=0)
+    CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 
 LOGGING = {
     "version": 1,

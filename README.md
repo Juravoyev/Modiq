@@ -37,7 +37,7 @@ shu raqamlardan qisqa matn yozadi. Matn uchun `backend/.env` ga qo'shing (kalitn
 
 ```
 GEMINI_API_KEY=...            # https://aistudio.google.com dan
-GEMINI_MODEL=gemini-3.8-flash # ixtiyoriy
+GEMINI_MODEL=gemini-3.6-flash # ixtiyoriy
 ```
 
 Kalit bo'lmasa ham tizim ishlaydi: karta raqamlarni ko'rsatadi va matn "sozlanmagan" deb yozadi.

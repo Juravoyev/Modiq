@@ -1,5 +1,6 @@
 from rest_framework import generics, mixins, permissions, viewsets
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from apps.common.permissions import IsBusinessMember, IsManager, IsManagerOrReadOnly
@@ -18,6 +19,8 @@ from .serializers import (
 
 class RegisterView(generics.CreateAPIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "register"
     serializer_class = RegisterSerializer
 
     def create(self, request, *args, **kwargs):
@@ -29,6 +32,8 @@ class RegisterView(generics.CreateAPIView):
 
 class LoginView(TokenObtainPairView):
     serializer_class = PhoneTokenObtainPairSerializer
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "login"
 
 
 class MeView(generics.RetrieveAPIView):

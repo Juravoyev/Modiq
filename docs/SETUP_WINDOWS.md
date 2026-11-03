@@ -66,7 +66,7 @@ python manage.py runserver
 ```
 
 * `migrate` jadvallarni yaratadi.
-* `test` 71 ta testni ishga tushiradi, oxirida `OK` chiqishi kerak.
+* `test` 74 ta testni ishga tushiradi, oxirida `OK` chiqishi kerak.
 * `createsuperuser` admin panel uchun foydalanuvchi yaratadi. Telefonni `+998901234567` ko'rinishida kiriting.
 * Tekshirish: http://localhost:8000/api/docs/ (API) va http://localhost:8000/admin/ (admin panel).
 

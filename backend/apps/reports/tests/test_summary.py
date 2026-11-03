@@ -83,3 +83,13 @@ class WeeklySummaryTests(TestCase):
             r = self.c.post("/api/reports/weekly-summary/")
         self.assertEqual(r.status_code, 200, r.data)
         self.assertEqual(m.call_count, 2)
+
+    @override_settings(GEMINI_API_KEY="k")
+    def test_cut_off_text_is_not_shown_or_cached(self):
+        cut = FakeResponse(json.dumps({"candidates": [{"finishReason": "MAX_TOKENS",
+                                                        "content": {"parts": [{"text": "Yarim gap"}]}}]}).encode())
+        with mock.patch("urllib.request.urlopen", side_effect=[cut, gemini_reply("To'liq matn.")]):
+            r1 = self.c.post("/api/reports/weekly-summary/")
+            r2 = self.c.post("/api/reports/weekly-summary/")
+        self.assertEqual((r1.status_code, r1.data["code"]), (503, "truncated"))
+        self.assertEqual(r2.data["text"], "To'liq matn.")
