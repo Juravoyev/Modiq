@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from apps.accounts.models import Branch
 from apps.catalog.models import ProductVariant
+from apps.customers.models import Customer
 from apps.common.fields import AllowedBranchPKField, BusinessScopedPKField
 
 from .models import Sale, SaleLine, SaleReturn, SaleReturnLine
@@ -22,6 +23,8 @@ class SaleLineInputSerializer(serializers.Serializer):
 class SaleQuoteSerializer(serializers.Serializer):
     branch = AllowedBranchPKField(queryset=Branch.objects.all())
     lines = SaleLineInputSerializer(many=True, allow_empty=False)
+    customer = BusinessScopedPKField(queryset=Customer.objects.select_related("group"), allow_null=True,
+                                     required=False, default=None)
 
 
 class SaleCreateSerializer(SaleQuoteSerializer):
@@ -31,10 +34,19 @@ class SaleCreateSerializer(SaleQuoteSerializer):
     note = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
 
 
+def customer_brief(customer) -> dict | None:
+    if customer is None:
+        return None
+    return {"id": customer.id, "phone": customer.phone, "full_name": customer.full_name,
+            "group_name": customer.group.name if customer.group_id else None,
+            "discount_percent": customer.discount_percent}
+
+
 def quote_to_dict(quote) -> dict:
     """Kassa ekrani uchun hisob natijasi. Tannarx yuborilmaydi (sotuvchi ham ko'radi)."""
     money = lambda d: f"{d:.2f}"  # noqa: E731
     return {
+        "customer": customer_brief(quote.customer),
         "lines": [{
             "variant": ln.variant.id, "sku": ln.variant.sku, "quantity": ln.quantity,
             "unit_price": money(ln.unit_price), "gross": money(ln.gross),
@@ -76,18 +88,22 @@ class SaleSerializer(serializers.ModelSerializer):
     payment_type_display = serializers.CharField(source="get_payment_type_display", read_only=True)
     lines = SaleLineSerializer(many=True, read_only=True)
     return_deadline = serializers.SerializerMethodField()
+    customer_info = serializers.SerializerMethodField()
 
     class Meta:
         model = Sale
         fields = ["id", "created_at", "branch", "branch_name", "cashier", "cashier_name", "payment_type",
                   "payment_type_display", "subtotal", "discount_total", "total", "note", "lines", "idempotency_key",
-                  "return_deadline"]
+                  "return_deadline", "customer", "customer_info"]
 
     def get_cashier_name(self, obj) -> str:
         return _user_name(obj.cashier)
 
     def get_return_deadline(self, obj) -> str:
         return return_deadline(obj).isoformat()
+
+    def get_customer_info(self, obj) -> dict | None:
+        return customer_brief(obj.customer)
 
 
 class SaleManagerSerializer(SaleSerializer):

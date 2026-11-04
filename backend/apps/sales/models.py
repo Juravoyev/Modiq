@@ -17,6 +17,9 @@ class Sale(BusinessOwnedModel):
 
     branch = models.ForeignKey("accounts.Branch", on_delete=models.PROTECT, related_name="sales")
     cashier = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
+    # Ixtiyoriy: kassada telefon raqami bilan tanlangan mijoz (imtiyoz va bonus uchun).
+    customer = models.ForeignKey("customers.Customer", null=True, blank=True, on_delete=models.PROTECT,
+                                 related_name="sales")
     # Kassa har bir savdo uchun yangi UUID yuboradi. Tarmoq uzilib so'rov qayta yuborilsa,
     # xuddi shu kalit bilan yangi savdo yaratilmaydi va qoldiq ikki marta kamaymaydi.
     idempotency_key = models.UUIDField()

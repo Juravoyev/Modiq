@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
 import { api, ApiError, qs } from "../api/client";
-import type { Page, PaymentType, Quote, Sale, Variant } from "../api/types";
+import type { CustomerBrief, Page, PaymentType, Quote, Sale, Variant } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
+import { CustomerPicker } from "../components/CustomerPicker";
 import { Receipt } from "../components/Receipt";
 import { Empty, ErrorBox, Loading, ProductThumb } from "../components/ui";
 import { money, newIdempotencyKey } from "../utils/format";
@@ -21,6 +22,7 @@ export function PosPage() {
   const [query, setQuery] = useState("");
   const search = useDebounced(query.trim(), 250);
   const [cart, setCart] = useState<CartLine[]>([]);
+  const [customer, setCustomerState] = useState<CustomerBrief | null>(null);
   const [payment, setPayment] = useState<PaymentType>("cash");
   // Kalit savat o'zgargandagina yangilanadi: tarmoq xatosidan keyin "qayta urinish" o'sha savdoni takrorlamaydi.
   const [idemKey, setIdemKey] = useState(newIdempotencyKey);
@@ -31,17 +33,20 @@ export function PosPage() {
   const [done, setDone] = useState<Sale | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Yakuniy narxni (aksiya, chegirma) backend hisoblaydi: savdo yakunlanganda ham aynan shu qoidalar ishlaydi.
-  const cartKey = JSON.stringify(cart.map((l) => [l.variant.id, l.quantity, l.discount || "0"]));
+  // Yakuniy narxni (aksiya, imtiyoz, chegirma) backend hisoblaydi: savdo yakunlanganda ham aynan shu qoidalar ishlaydi.
+  const cartKey = JSON.stringify({
+    customer: customer?.id ?? null,
+    lines: cart.map((l) => [l.variant.id, l.quantity, l.discount || "0"]),
+  });
   const quoteKey = useDebounced(cartKey, 300);
   const [quote, setQuote] = useState<{ key: string; data: Quote | null; error: ApiError | null } | null>(null);
 
   useEffect(() => {
-    if (!branch || quoteKey === "[]") { setQuote(null); return; }
+    const parsed = JSON.parse(quoteKey) as { customer: number | null; lines: [number, number, string][] };
+    if (!branch || parsed.lines.length === 0) { setQuote(null); return; }
     let alive = true;
-    const lines = (JSON.parse(quoteKey) as [number, number, string][])
-      .map(([variant, quantity, discount_amount]) => ({ variant, quantity, discount_amount }));
-    api<Quote>("/sales/quote/", { method: "POST", body: { branch: branch.id, lines } })
+    const lines = parsed.lines.map(([variant, quantity, discount_amount]) => ({ variant, quantity, discount_amount }));
+    api<Quote>("/sales/quote/", { method: "POST", body: { branch: branch.id, customer: parsed.customer, lines } })
       .then((data) => alive && setQuote({ key: quoteKey, data, error: null }))
       .catch((error: ApiError) => alive && setQuote({ key: quoteKey, data: null, error }));
     return () => { alive = false; };
@@ -65,6 +70,12 @@ export function PosPage() {
     setError(null);
     setNeedBelowCostConfirm(false);
     setBelowCostConfirmed(false);
+  }
+
+  function setCustomer(c: CustomerBrief | null) {
+    setCustomerState(c);
+    setIdemKey(newIdempotencyKey());
+    setError(null);
   }
 
   function add(v: Variant) {
@@ -119,11 +130,13 @@ export function PosPage() {
           branch: branch.id,
           payment_type: payment,
           allow_below_cost: belowCostConfirmed,
+          customer: customer?.id ?? null,
           lines: cart.map((l) => ({ variant: l.variant.id, quantity: l.quantity, discount_amount: l.discount || "0" })),
         },
       });
       setDone(sale);
       setCart([]);
+      setCustomerState(null);
       setPayment("cash");
       setIdemKey(newIdempotencyKey());
       setNeedBelowCostConfirm(false);
@@ -243,6 +256,8 @@ export function PosPage() {
             })}
           </div>
         )}
+
+        <CustomerPicker value={customer} onChange={setCustomer} />
 
         <div>
           <div className="total-row num"><span>Summa</span><span>{money(totals.subtotal)}</span></div>

@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from "./auth/AuthContext";
 import { Layout } from "./components/Layout";
 import { Loading } from "./components/ui";
 import { BranchesPage } from "./pages/BranchesPage";
+import { CustomersPage } from "./pages/CustomersPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MorePage } from "./pages/MorePage";
@@ -47,6 +48,7 @@ export default function App() {
             <Route path="products/:id/edit" element={<RequireManager><ProductEditPage /></RequireManager>} />
             <Route path="receipts" element={<RequireManager><ReceiptsPage /></RequireManager>} />
             <Route path="transfers" element={<RequireManager><TransfersPage /></RequireManager>} />
+            <Route path="customers" element={<CustomersPage />} />
             <Route path="promotions" element={<RequireManager><PromotionsPage /></RequireManager>} />
             <Route path="staff" element={<RequireManager><StaffPage /></RequireManager>} />
             <Route path="branches" element={<RequireManager><BranchesPage /></RequireManager>} />

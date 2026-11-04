@@ -17,6 +17,7 @@ from apps.catalog.models import Brand, Category, Color, Product, Season, Size
 from apps.catalog.services import generate_variants
 from apps.inventory.models import Receipt, ReceiptLine, Stock, Transfer, TransferLine
 from apps.inventory.services import confirm_receipt, receive_transfer, send_transfer
+from apps.customers.models import Customer, CustomerGroup
 from apps.pricing.models import Promotion
 from apps.sales.models import Sale, SaleReturn
 from apps.sales.services import LineInput, ReturnLineInput, create_return, create_sale
@@ -65,6 +66,18 @@ PRODUCTS = [
 ]
 
 
+# telefon, ism, toifa (None — oddiy mijoz)
+CUSTOMERS = [
+    ("+998901234501", "Nodira Aliyeva", "VIP"),
+    ("+998901234502", "Bekzod Qodirov", "Doimiy mijoz"),
+    ("+998901234503", "Sardor Ergashev", "Doimiy mijoz"),
+    ("+998901234504", "Gulnora Saidova", None),
+    ("+998901234505", "Otabek Mirzayev", None),
+    ("+998901234506", "Zarina Hamidova", "Xodim"),
+]
+GROUPS = [("Doimiy mijoz", 5), ("VIP", 10), ("Xodim", 15)]
+
+
 def _season_end(season, today):
     """Mavsumning bugundan keyingi eng yaqin oxirgi kuni."""
     year = today.year + (1 if season.end_month < today.month else 0)
@@ -103,6 +116,8 @@ class Command(BaseCommand):
         # PROTECT bog'lanishlar sababli hujjatlar avval o'chiriladi.
         SaleReturn.objects.filter(business=business).delete()
         Sale.objects.filter(business=business).delete()
+        Promotion.objects.filter(business=business).delete()
+        Customer.objects.filter(business=business).delete()
         Transfer.objects.filter(business=business).delete()
         Receipt.objects.filter(business=business).delete()
         Stock.objects.filter(business=business).delete()
@@ -172,6 +187,10 @@ class Command(BaseCommand):
         Receipt.objects.filter(pk=receipt.pk).update(created_at=_at(start - timedelta(days=2), 9),
                                                      confirmed_at=_at(start - timedelta(days=2), 12))
 
+        groups = {n: CustomerGroup.objects.create(business=business, name=n, discount_percent=p) for n, p in GROUPS}
+        self.customers = [Customer.objects.create(business=business, phone=ph, full_name=nm,
+                                                  group=groups[g] if g else None) for ph, nm, g in CUSTOMERS]
+
         # 30 kunlik savdo. Dam olish kunlari savdo ko'proq.
         cashiers = {stores[0]: self.members["+998900000003"], stores[1]: self.members["+998900000004"]}
         n_sales = 0
@@ -238,5 +257,7 @@ class Command(BaseCommand):
             payment_type=self.rng.choice([Sale.PaymentType.CASH] * 3 + [Sale.PaymentType.CARD] * 2
                                          + [Sale.PaymentType.ONLINE]),
             idempotency_key=uuid.uuid4(),
+            # Har uchinchi xaridor o'zini tanishtiradi (telefon raqami bilan).
+            customer=self.rng.choice(self.customers) if self.rng.random() < 0.35 else None,
         )
         return sale

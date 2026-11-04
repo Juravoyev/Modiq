@@ -16,15 +16,17 @@ Backend modullari (`backend/apps/`):
 | `catalog` | Kategoriya, brend, mavsum, rang, o'lcham, Product (model), ProductVariant (rang×o'lcham = SKU) |
 | `inventory` | Stock (filial×variant qoldig'i), StockMovement (jurnal), Receipt (kirim), Transfer (ko'chirish) |
 | `sales` | Sale, SaleLine (kassa) |
+| `customers` | Customer (telefon bilan), CustomerGroup (imtiyoz toifasi: doimiy chegirma foizi) |
 | `pricing` | Promotion (muddatli aksiya: barcha tovar, kategoriya, mavsum yoki tanlangan tovarlar), PricingSettings, narx hisoblash (`services.price_cart`) |
 
 Keyingi bosqichlarda: `insights` (sotilmay qolish xavfi), `reports`.
 
 **Narx hisoblash qoidalari** (`pricing/services.py::price_cart`). Kassaning oldindan hisobi (`POST /api/sales/quote/`) ham, savdoni yakunlash ham shu bitta funksiyadan o'tadi, shuning uchun ekrandagi va bazadagi summa bir xil qoidalar bilan hisoblanadi:
 1. Tovarga to'g'ri keladigan faol aksiyalardan mijoz uchun eng foydalisi olinadi, aksiyalar ustma-ust qo'shilmaydi.
-2. Avtomatik chegirma narxni tannarxdan pastga tushirmaydi.
-3. Sotuvchining qo'lda beradigan chegirmasi `cashier_max_discount_percent` bilan cheklangan (standart 10%). Egasi va menejerda chegara yo'q, lekin tannarxdan past sotish uchun alohida tasdiq kerak.
-4. Qo'llangan aksiya, uning nomi va summasi `SaleLine` ga yozib qo'yiladi: aksiya keyin o'zgarsa ham eski chek o'zgarmaydi. Savdoda ishlatilgan aksiyani o'chirib bo'lmaydi, faqat to'xtatiladi.
+2. Mijoz imtiyozi (toifa foizi) ham aksiya bilan qo'shilmaydi: har bir qatorda ikkisidan foydalirog'i olinadi.
+3. Avtomatik chegirma narxni tannarxdan pastga tushirmaydi.
+4. Sotuvchining qo'lda beradigan chegirmasi `cashier_max_discount_percent` bilan cheklangan (standart 10%). Egasi va menejerda chegara yo'q, lekin tannarxdan past sotish uchun alohida tasdiq kerak.
+5. Qo'llangan aksiya yoki imtiyoz, uning nomi va summasi `SaleLine` ga yozib qo'yiladi: aksiya keyin o'zgarsa ham eski chek o'zgarmaydi. Savdoda ishlatilgan aksiyani o'chirib bo'lmaydi, faqat to'xtatiladi.
 
 ## 2. Asosiy qarorlar va sabablari
 
@@ -62,6 +64,8 @@ Hujjat: `/api/docs/` (Swagger), sxema: `/api/schema/`.
 | `POST /api/sales/quote/` | Savatning yakuniy narxi (aksiya, chegirma). Hech narsa saqlanmaydi |
 | `/api/pricing/promotions/?status=` + `/stop/`, `/resume/` | Aksiyalar (yozish: menejer), natijasi bilan (`sales_count`, `units_sold`, `discount_given`) |
 | `/api/pricing/settings/` | Chegirma sozlamalari (yozish: menejer) |
+| `/api/customers/?phone=&search=` | Mijozlar (qo'shish: hamma, toifani belgilash va o'chirish: menejer), `purchases_count`, `total_spent` |
+| `/api/customers/groups/` | Imtiyoz toifalari, 0–50% (yozish: menejer) |
 | `/api/sales/` | `POST` savdoni yakunlash, `GET` tarix (`returned_quantity`, `return_deadline` bilan) |
 | `/api/sales/returns/` + `/approve/`, `/reject/` | Yaroqsiz tovarni qaytarish (24 soat ichida) |
 | `GET /api/sales/dashboard/?days=7\|30\|90&branch=` | Hisobot: tushum, foyda, qaytarishlar, qoldiq qiymati, sotilmayotgan tovarlar (egasi/menejer) |
@@ -91,6 +95,7 @@ Hujjat: `/api/docs/` (Swagger), sxema: `/api/schema/`.
 | 8 | Hisobotlar haqiqiy ma'lumotlarga mos | ✅ `sales/tests/test_dashboard.py` |
 | 9 | Qaytarish: muddat, sotilganidan ko'p qaytarib bo'lmaydi, tasdiqlash huquqi, qoldiqqa qaytmaydi | ✅ `sales/tests/test_returns.py` |
 | 10 | Xodim va filial boshqaruvi huquqlari | ✅ `accounts/tests/test_staff_branches.py` |
+| 12 | Imtiyoz: aksiya bilan qo'shilmaydi, tannarxdan past emas, toifani faqat menejer beradi | ✅ `customers/tests/test_customers.py` |
 | 11 | Aksiya: eng foydalisi, ustma-ust emas, tannarxdan past emas, muddat, qamrov (mavsum/kategoriya/tovar), sotuvchi chegarasi | ✅ `pricing/tests/test_promotions.py` |
 
 ## 6. Frontend tuzilishi (`frontend/src/`)
@@ -101,7 +106,7 @@ Hujjat: `/api/docs/` (Swagger), sxema: `/api/schema/`.
 | `api/types.ts` | Backend javoblari turlari |
 | `auth/AuthContext.tsx` | Joriy foydalanuvchi, tanlangan filial, login/logout |
 | `components/` | Layout, Logo (izometrik kub), Receipt (chek), umumiy UI (Loading, Empty, ErrorBox, Field, Pagination, StockBadge) |
-| `pages/` | Login, Register, Kassa, Hisobot, Tovarlar, Yangi tovar, Tovarni tahrirlash, Kirim, Ko'chirish, Qoldiq, Savdolar, Qaytarish, Aksiyalar, Xodimlar, Filiallar, "Yana" (telefon menyusi) |
+| `pages/` | Login, Register, Kassa, Hisobot, Tovarlar, Yangi tovar, Tovarni tahrirlash, Kirim, Ko'chirish, Qoldiq, Savdolar, Qaytarish, Mijozlar, Aksiyalar, Xodimlar, Filiallar, "Yana" (telefon menyusi) |
 | `styles/global.css` | Dizayn tokenlari va komponent klasslari |
 
 Qo'shimcha kutubxona faqat `react-router-dom` (sahifalar orasida yurish). Holat boshqaruvi uchun alohida kutubxona ishlatilmagan.

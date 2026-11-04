@@ -35,7 +35,7 @@ class SaleViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Creat
     def get_queryset(self):
         return Sale.objects.filter(
             business=self.request.business, branch__in=self.request.membership.allowed_branches()
-        ).select_related("branch", "cashier").prefetch_related(
+        ).select_related("branch", "cashier", "customer__group").prefetch_related(
             "lines__variant__product", "lines__variant__color", "lines__variant__size",
             "lines__return_lines__sale_return",
         )
@@ -57,7 +57,7 @@ class SaleViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Creat
             business=request.business, branch=data["branch"], user=request.user, membership=request.membership,
             lines=[LineInput(line["variant"], line["quantity"], line["discount_amount"]) for line in data["lines"]],
             payment_type=data["payment_type"], idempotency_key=data["idempotency_key"],
-            allow_below_cost=data["allow_below_cost"], note=data["note"],
+            allow_below_cost=data["allow_below_cost"], note=data["note"], customer=data["customer"],
         )
         out_cls = SaleManagerSerializer if request.membership.is_manager else SaleSerializer
         sale = self.get_queryset().get(pk=sale.pk)
@@ -71,6 +71,7 @@ class SaleViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Creat
         quote = quote_sale(
             business=request.business, membership=request.membership,
             lines=[LineInput(line["variant"], line["quantity"], line["discount_amount"]) for line in s.validated_data["lines"]],
+            customer=s.validated_data["customer"],
         )
         return Response(quote_to_dict(quote))
 

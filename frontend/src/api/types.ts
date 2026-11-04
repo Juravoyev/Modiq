@@ -82,7 +82,7 @@ export interface SaleLine {
   unit_price: string;
   /** Aksiya chegirmasi (qator bo'yicha jami). */
   auto_discount: string;
-  discount_source: "" | "promotion";
+  discount_source: DiscountSource;
   discount_label: string;
   promotion: number | null;
   /** Qo'lda berilgan chegirma. */
@@ -108,6 +108,8 @@ export interface Sale {
   note: string;
   lines: SaleLine[];
   return_deadline: string;
+  customer: number | null;
+  customer_info: CustomerBrief | null;
   cost_total?: string;
   gross_profit?: string;
 }
@@ -200,7 +202,7 @@ export interface QuoteLine {
   unit_price: string;
   gross: string;
   auto_discount: string;
-  discount_source: "" | "promotion";
+  discount_source: DiscountSource;
   discount_label: string;
   promotion: number | null;
   manual_discount: string;
@@ -210,6 +212,7 @@ export interface QuoteLine {
 
 /** Kassadagi oldindan hisob: backend savdoni yakunlaganda ham aynan shu qoidalar bilan hisoblaydi. */
 export interface Quote {
+  customer: CustomerBrief | null;
   lines: QuoteLine[];
   subtotal: string;
   auto_discount_total: string;
@@ -218,4 +221,29 @@ export interface Quote {
   total: string;
   below_cost_skus: string[];
   cashier_max_discount_percent: number;
+}
+
+export type DiscountSource = "" | "promotion" | "privilege";
+
+export interface CustomerGroup { id: number; name: string; discount_percent: number; customers_count: number }
+
+export interface CustomerBrief {
+  id: number;
+  phone: string;
+  full_name: string;
+  group_name: string | null;
+  discount_percent: number;
+}
+
+export interface Customer {
+  id: number;
+  phone: string;
+  full_name: string;
+  group: number | null;
+  group_name: string | null;
+  discount_percent: number;
+  note: string;
+  created_at: string;
+  purchases_count: number;
+  total_spent: string;
 }

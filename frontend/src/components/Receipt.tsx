@@ -10,6 +10,9 @@ export function Receipt({ sale, businessName }: { sale: Sale; businessName: stri
         <div className="muted">{sale.branch_name}</div>
         <div className="muted">Chek № {sale.id} · {dateTime(sale.created_at)}</div>
         {sale.cashier_name && <div className="muted">Sotuvchi: {sale.cashier_name}</div>}
+        {sale.customer_info && (
+          <div className="muted">Mijoz: {sale.customer_info.full_name || sale.customer_info.phone}</div>
+        )}
       </div>
       <div style={{ borderTop: "1px dashed var(--border)" }} />
       {sale.lines.map((l) => (

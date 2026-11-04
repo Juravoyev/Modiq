@@ -21,14 +21,14 @@ LineInput = CartLine
 
 
 def create_sale(*, business, branch, user, membership, lines, payment_type, idempotency_key,
-                allow_below_cost=False, note=""):
+                allow_below_cost=False, note="", customer=None):
     """Savdoni yakunlaydi. (sale, created) qaytaradi. created=False — bu takroriy so'rov edi."""
     existing = Sale.objects.filter(business=business, idempotency_key=idempotency_key).first()
     if existing is not None:
         return existing, False
     try:
         return _create_sale(business, branch, user, membership, lines, payment_type, idempotency_key,
-                            allow_below_cost, note), True
+                            allow_below_cost, note, customer), True
     except IntegrityError:
         # Xuddi shu kalit bilan parallel so'rov bizdan oldin yakunlandi.
         existing = Sale.objects.filter(business=business, idempotency_key=idempotency_key).first()
@@ -37,14 +37,15 @@ def create_sale(*, business, branch, user, membership, lines, payment_type, idem
         return existing, False
 
 
-def quote_sale(*, business, membership, lines):
+def quote_sale(*, business, membership, lines, customer=None):
     """Savdoni yakunlamasdan narxini hisoblaydi (kassa ekrani uchun). Hech narsa yozilmaydi."""
-    return price_cart(business=business, membership=membership, lines=lines)
+    return price_cart(business=business, membership=membership, lines=lines, customer=customer)
 
 
 @transaction.atomic
-def _create_sale(business, branch, user, membership, lines, payment_type, idempotency_key, allow_below_cost, note):
-    quote = price_cart(business=business, membership=membership, lines=lines)
+def _create_sale(business, branch, user, membership, lines, payment_type, idempotency_key, allow_below_cost, note,
+                 customer):
+    quote = price_cart(business=business, membership=membership, lines=lines, customer=customer)
     if quote.below_cost_skus:
         below = ", ".join(quote.below_cost_skus)
         if not membership.is_manager:
@@ -57,8 +58,8 @@ def _create_sale(business, branch, user, membership, lines, payment_type, idempo
 
     # Savdo qatori birinchi yaratiladi: bir xil idempotency_key bilan parallel so'rov shu yerda kutib turadi.
     sale = Sale.objects.create(
-        business=business, branch=branch, cashier=user, idempotency_key=idempotency_key, payment_type=payment_type,
-        subtotal=quote.subtotal, discount_total=quote.discount_total, total=quote.total, cost_total=quote.cost_total,
+        business=business, branch=branch, cashier=user, customer=customer, idempotency_key=idempotency_key,
+        payment_type=payment_type, subtotal=quote.subtotal, discount_total=quote.discount_total, total=quote.total, cost_total=quote.cost_total,
         note=note,
     )
     # Qoldiq qatorlari variant id tartibida qulflanadi (deadlock bo'lmasligi uchun).

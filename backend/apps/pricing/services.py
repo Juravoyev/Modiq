@@ -1,16 +1,17 @@
-"""Narx hisoblash: aksiya va qo'lda chegirma.
+"""Narx hisoblash: aksiya, mijoz imtiyozi va qo'lda chegirma.
 
 Kassadagi "oldindan hisob" (quote) ham, savdoni yakunlash ham shu bitta funksiyadan foydalanadi.
 Shu sababli ekranda ko'rsatilgan summa bilan bazaga yozilgan summa bir xil qoidalar bo'yicha hisoblanadi.
 
 Qoidalar:
 - Bir tovarga bir nechta aksiya to'g'ri kelsa, mijoz uchun eng foydalisi olinadi (ustma-ust qo'shilmaydi).
+- Mijoz imtiyozi (toifa foizi) ham aksiya bilan qo'shilmaydi: ikkisidan foydalirog'i olinadi.
 - Avtomatik chegirma narxni tannarxdan pastga tushirmaydi.
 - Sotuvchining qo'lda beradigan chegirmasi sozlamadagi foiz bilan cheklangan. Egasi va menejerda chegara yo'q,
   lekin tannarxdan past sotish uchun alohida tasdiq kerak (sales.services.create_sale).
 """
 from dataclasses import dataclass, field
-from decimal import ROUND_DOWN, Decimal
+from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
 
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
@@ -19,6 +20,10 @@ from .models import PricingSettings, Promotion
 
 ZERO = Decimal("0.00")
 CENT = Decimal("0.01")
+SOUM = Decimal("1")
+
+PROMOTION = "promotion"
+PRIVILEGE = "privilege"
 
 
 @dataclass
@@ -35,7 +40,7 @@ class PricedLine:
     unit_price: Decimal
     unit_cost: Decimal
     auto_discount: Decimal = ZERO  # aksiya chegirmasi (qator bo'yicha jami)
-    discount_source: str = ""  # "promotion" yoki bo'sh
+    discount_source: str = ""  # "promotion", "privilege" yoki bo'sh
     promotion: object = None
     discount_label: str = ""
     manual_discount: Decimal = ZERO
@@ -61,6 +66,7 @@ class PricedLine:
 class Quote:
     lines: list
     settings: PricingSettings
+    customer: object = None
     today: object = None
     below_cost_skus: list = field(default_factory=list)
 
@@ -112,7 +118,16 @@ def best_promotion(product, unit_price: Decimal, unit_cost: Decimal, promotions)
     return best, best_promo
 
 
-def price_cart(*, business, membership, lines, today=None) -> Quote:
+def privilege_discount(customer, unit_price: Decimal, unit_cost: Decimal) -> Decimal:
+    """Mijoz toifasi bo'yicha bitta dona uchun chegirma (tannarx chegarasi bilan)."""
+    percent = customer.discount_percent if customer is not None else 0
+    if not percent:
+        return ZERO
+    d = (unit_price * percent / 100).quantize(SOUM, rounding=ROUND_HALF_UP)
+    return min(d, max(ZERO, unit_price - unit_cost))
+
+
+def price_cart(*, business, membership, lines, customer=None, today=None) -> Quote:
     """Savat narxini hisoblaydi. Noto'g'ri chegirmada ValidationError ({"detail", "code"})."""
     if not lines:
         raise ValidationError({"detail": "Savat bo'sh."})
@@ -130,15 +145,21 @@ def price_cart(*, business, membership, lines, today=None) -> Quote:
         pl = PricedLine(variant=v, quantity=line.quantity, unit_price=v.effective_sale_price,
                         unit_cost=v.effective_purchase_price)
         unit_d, promo = best_promotion(v.product, pl.unit_price, pl.unit_cost, promotions)
-        if promo is not None:
+        priv_d = privilege_discount(customer, pl.unit_price, pl.unit_cost)
+        # Teng bo'lsa aksiya ko'rsatiladi (mijoz uchun farqi yo'q).
+        if promo is not None and unit_d >= priv_d:
             pl.auto_discount = unit_d * line.quantity
-            pl.discount_source = "promotion"
+            pl.discount_source = PROMOTION
             pl.promotion = promo
             pl.discount_label = f"Aksiya: {promo.label}"
+        elif priv_d > 0:
+            pl.auto_discount = priv_d * line.quantity
+            pl.discount_source = PRIVILEGE
+            pl.discount_label = f"Imtiyoz: {customer.group.name} (−{customer.discount_percent}%)"
         _apply_manual_discount(pl, line.manual_discount, membership, settings)
         priced.append(pl)
 
-    quote = Quote(lines=priced, settings=settings, today=today)
+    quote = Quote(lines=priced, settings=settings, customer=customer, today=today)
     quote.below_cost_skus = [ln.variant.sku for ln in priced if ln.below_cost]
     return quote
 

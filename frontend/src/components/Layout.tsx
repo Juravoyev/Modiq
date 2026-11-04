@@ -15,6 +15,7 @@ export const NAV: NavItem[] = [
   { to: "/stock", label: "Qoldiq", icon: "📦", mobile: true },
   { to: "/sales", label: "Savdolar", icon: "📈", mobile: true },
   { to: "/returns", label: "Qaytarish", icon: "↩" },
+  { to: "/customers", label: "Mijozlar", icon: "👤" },
   { to: "/promotions", label: "Aksiyalar", icon: "🏷", managerOnly: true },
   { to: "/staff", label: "Xodimlar", icon: "👥", managerOnly: true },
   { to: "/branches", label: "Filiallar", icon: "🏬", managerOnly: true },
