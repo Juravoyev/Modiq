@@ -176,3 +176,34 @@ class AISummaryTests(TestCase):
         with mock.patch("urllib.request.urlopen", side_effect=urllib.error.URLError("offline")):
             r = self.c.post("/api/insights/recommendations/summary/")
         self.assertEqual((r.status_code, r.data["code"]), (503, "ai_unavailable"))
+
+    @override_settings(GEMINI_API_KEY="test-key", GEMINI_MODEL="band-model, zaxira-model")
+    def test_falls_back_to_next_model_when_busy_or_retired(self):
+        import io
+        import urllib.error
+
+        def err(code):
+            return urllib.error.HTTPError("u", code, "x", {}, io.BytesIO(b"{}"))
+
+        answer = {"candidates": [{"content": {"parts": [{"text": "Xulosa"}]}}]}
+        for first in (err(503), err(404), TimeoutError("sekin")):
+            cache.clear()
+            with mock.patch("urllib.request.urlopen", side_effect=[first, FakeResponse(answer)]) as m:
+                r = self.c.post("/api/insights/recommendations/summary/")
+            self.assertEqual((r.status_code, r.data["text"], r.data["model"]), (200, "Xulosa", "zaxira-model"))
+            self.assertIn("zaxira-model", m.call_args[0][0].full_url)
+
+        cache.clear()
+        with mock.patch("urllib.request.urlopen", side_effect=[err(503), err(503)]):
+            r = self.c.post("/api/insights/recommendations/summary/")
+        self.assertEqual((r.status_code, r.data["code"]), (503, "ai_busy"))
+
+    @override_settings(GEMINI_API_KEY="test-key", GEMINI_MODEL="eski-model")
+    def test_unknown_model_explains_what_to_change(self):
+        import io
+        import urllib.error
+        err = urllib.error.HTTPError("u", 404, "nf", {}, io.BytesIO(b"{}"))
+        with mock.patch("urllib.request.urlopen", side_effect=err):
+            r = self.c.post("/api/insights/recommendations/summary/")
+        self.assertEqual((r.status_code, r.data["code"]), (503, "ai_model"))
+        self.assertIn("GEMINI_MODEL", r.data["detail"])

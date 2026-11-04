@@ -142,5 +142,7 @@ LOGGING = {
 
 # Gemini: tavsiyalar bo'yicha AI xulosasi (ixtiyoriy). Kalit bo'lmasa, tavsiyalar baribir ishlaydi.
 GEMINI_API_KEY = env("GEMINI_API_KEY", default="")
-GEMINI_MODEL = env("GEMINI_MODEL", default="gemini-2.5-flash")
-GEMINI_TIMEOUT = env.int("GEMINI_TIMEOUT", default=25)
+# Vergul bilan bir nechta model: birinchisi band yoki eskirgan bo'lsa, keyingisi sinaladi.
+# "gemini-flash-latest" doim eng yangi flash modelga ishora qiladi (aniq versiya eskirib qolishi mumkin).
+GEMINI_MODEL = env("GEMINI_MODEL", default="gemini-flash-latest,gemini-3.5-flash")
+GEMINI_TIMEOUT = env.int("GEMINI_TIMEOUT", default=40)

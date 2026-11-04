@@ -45,10 +45,10 @@ Docker bilan: `backend/.env` yarating, keyin loyiha ildizida `docker compose up 
 
 ```bash
 GEMINI_API_KEY=sizning-kalitingiz
-GEMINI_MODEL=gemini-2.5-flash    # ixtiyoriy
+GEMINI_MODEL=gemini-flash-latest,gemini-3.5-flash    # ixtiyoriy, vergul bilan zaxira model
 ```
 
-Keyin backendni qayta ishga tushiring. Kalit bo'lmasa ham tavsiyalar to'liq ishlaydi: qaysi tovarga necha foiz chegirma berishni qoidalar hisoblaydi, Gemini faqat tayyor ro'yxatni umumlashtiradi. Gemini'ga faqat tovar nomlari va umumlashtirilgan raqamlar yuboriladi.
+Keyin backendni qayta ishga tushiring. Google eski modellarni vaqti-vaqti bilan yopadi: "model topilmadi" xabari chiqsa, kalitingizga ochiq modellarni https://aistudio.google.com da ko'ring va `GEMINI_MODEL` ni almashtiring. Kalit bo'lmasa ham tavsiyalar to'liq ishlaydi: qaysi tovarga necha foiz chegirma berishni qoidalar hisoblaydi, Gemini faqat tayyor ro'yxatni umumlashtiradi. Gemini'ga faqat tovar nomlari va umumlashtirilgan raqamlar yuboriladi.
 
 ## Frontendni lokal ishga tushirish
 
@@ -84,5 +84,5 @@ cd backend
 python manage.py test
 ```
 
-120 ta avtomatik test: savdo, qoldiq, ko'chirish, qaytarish, hisobot, huquqlar, aksiya, imtiyoz, bonus va tavsiyalar.
+122 ta avtomatik test: savdo, qoldiq, ko'chirish, qaytarish, hisobot, huquqlar, aksiya, imtiyoz, bonus va tavsiyalar.
 Testlar PostgreSQL talab qiladi (qulflash va constraintlar tekshiriladi), `.env` dagi `DATABASE_URL` foydalanuvchisiga `CREATEDB` huquqi kerak.

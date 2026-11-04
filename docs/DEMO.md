@@ -148,7 +148,7 @@ Brauzerni telefon o'lchamiga keltiring (F12 → telefon belgisi): pastki menyu, 
 - **Ma'lumot qayerda saqlanadi?** PostgreSQL bazasida. Har bir do'kon faqat o'z ma'lumotini ko'radi, bu testlar bilan tekshirilgan.
 - **Ikki sotuvchi bir vaqtda oxirgi donani sotsa-chi?** Faqat bittasi sotadi, ikkinchisiga "qoldiq yetarli emas" chiqadi. Qoldiq hech qachon manfiy bo'lmaydi.
 - **Tovar o'chirilsa, hisobotlar buziladimi?** Yo'q. Savdo tarixi bor tovar o'chirilmaydi, arxivlanadi.
-- **Testlar bormi?** Backend'da 120 ta avtomatik test bor: savdo, qoldiq, ko'chirish, qaytarish, hisobot, huquqlar, aksiya, imtiyoz, bonus va tavsiyalar.
+- **Testlar bormi?** Backend'da 122 ta avtomatik test bor: savdo, qoldiq, ko'chirish, qaytarish, hisobot, huquqlar, aksiya, imtiyoz, bonus va tavsiyalar.
 - **Aksiya, imtiyoz va bonus birga qo'llansa, do'kon zarar ko'rmaydimi?** Aksiya va imtiyoz ustma-ust qo'shilmaydi, ikkisidan mijoz uchun foydalirog'i olinadi. Avtomatik chegirma ham, bonus ham narxni tannarxdan pastga tushirmaydi. Bonus chekning ko'pi bilan 35 foizini qoplaydi.
 - **Sotilmay qolishi mumkin bo'lgan tovarga qanday chegirma qo'llaysiz?** Tizim har bir tovar uchun oxirgi sotuvdan beri kunlarni, qoldiq hozirgi tezlikda necha kunga yetishini va mavsum tugashini hisoblaydi. Shundan xavf darajasi va chegirma (30/20/10%) chiqadi, sababi bilan. Menejer bir bosishda aksiya yaratadi, keyin natijasini (aksiyadan oldin va keyin sotilgan dona) ko'radi.
 - **AI noto'g'ri tavsiya bersa-chi?** AI tavsiya bermaydi, faqat qoidalar chiqargan ro'yxatni tushuntiradi. Foizni va tovarni qoidalar hisoblaydi, har birining sababi ko'rsatiladi.
