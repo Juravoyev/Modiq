@@ -104,3 +104,46 @@ export function qs(params: Record<string, string | number | boolean | undefined 
   const s = p.toString();
   return s ? `?${s}` : "";
 }
+
+/**
+ * Javobi bo'lak-bo'lak (stream) keladigan POST so'rov: har bir bo'lak kelishi bilan onChunk chaqiriladi.
+ * Xato (JSON) bo'lsa, oddiy api() kabi ApiError tashlanadi. To'liq matnni qaytaradi.
+ */
+export async function apiStream(path: string, body: unknown, onChunk: (text: string) => void,
+                                signal?: AbortSignal): Promise<string> {
+  const send = () => fetch(`/api${path}`, {
+    method: "POST", signal,
+    headers: { "Content-Type": "application/json", Accept: "text/plain, application/json",
+               ...(tokens.access ? { Authorization: `Bearer ${tokens.access}` } : {}) },
+    body: JSON.stringify(body),
+  });
+  let res: Response;
+  try {
+    res = await send();
+    if (res.status === 401 && (await refreshAccess())) res = await send();
+  } catch (e) {
+    if ((e as Error).name === "AbortError") throw e;
+    throw toError(0, null);
+  }
+  if (res.status === 401) {
+    tokens.clear();
+    onUnauthorized();
+  }
+  if (!res.ok || !res.body) {
+    let data: unknown = null;
+    try { data = await res.json(); } catch { data = null; }
+    throw toError(res.status, data);
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let full = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const text = decoder.decode(value, { stream: true });
+    if (text) { full += text; onChunk(text); }
+  }
+  const tail = decoder.decode();
+  if (tail) { full += tail; onChunk(tail); }
+  return full;
+}

@@ -9,18 +9,12 @@ Mijozlar, xodimlar va do'kon nomi yuborilmaydi.
 """
 import hashlib
 import json
-import logging
-import urllib.error
-import urllib.request
 
-from django.conf import settings
 from django.core.cache import cache
-from rest_framework import status
-from rest_framework.exceptions import APIException
 
-log = logging.getLogger(__name__)
+from apps.common import llm
+from apps.common.llm import LLMUnavailable as AIUnavailable  # noqa: F401  (eski nom)
 
-API_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 CACHE_SECONDS = 60 * 60
 MAX_ITEMS = 15
 
@@ -43,11 +37,6 @@ Ma'lumot:
 """
 
 
-class AIUnavailable(APIException):
-    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-    default_code = "ai_unavailable"
-
-
 def _payload(recs: list[dict], totals: dict) -> dict:
     return {
         "jami_tovar": totals["count"],
@@ -62,66 +51,9 @@ def _payload(recs: list[dict], totals: dict) -> dict:
     }
 
 
-def models() -> list[str]:
-    """GEMINI_MODEL vergul bilan bir nechta bo'lishi mumkin: birinchisi band yoki eskirgan bo'lsa, keyingisi sinaladi."""
-    return [m.strip() for m in settings.GEMINI_MODEL.split(",") if m.strip()]
-
-
-def _request(prompt: str, model: str):
-    body = json.dumps({
-        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-        # Yangi modellar javobdan oldin "o'ylaydi" va bu ham token sarflaydi, shuning uchun zaxira katta.
-        "generationConfig": {"temperature": 0.3, "maxOutputTokens": 4096},
-    }).encode()
-    return urllib.request.Request(API_URL.format(model=model), data=body, method="POST",
-                                  headers={"Content-Type": "application/json", "x-goog-api-key": settings.GEMINI_API_KEY})
-
-
-def _text(data) -> str:
-    try:
-        parts = data["candidates"][0]["content"]["parts"]
-        return "".join(p.get("text", "") for p in parts).strip()
-    except (KeyError, IndexError, TypeError):
-        return ""
-
-
-ERRORS = {
-    "ai_busy": "Gemini hozir band (Google serverida yuklama yuqori). Bir-ikki daqiqadan keyin qayta urinib ko'ring. "
-               "Tavsiyalar baribir ishlaydi.",
-    "ai_model": "backend/.env dagi GEMINI_MODEL modeli Gemini'da yo'q yoki eskirgan. Uni almashtiring "
-                "(masalan, gemini-flash-latest).",
-    "ai_unavailable": "Gemini bilan aloqa yo'q yoki javob juda kech keldi. Tavsiyalar baribir ishlaydi.",
-}
-
-
-def _call_gemini(prompt: str) -> tuple[str, str]:
-    """(matn, model). Band, eskirgan yoki javob bermagan model o'tkazib yuborilib, ro'yxatdagi keyingisi sinaladi."""
-    last = "ai_unavailable"
-    for model in models():
-        try:
-            with urllib.request.urlopen(_request(prompt, model), timeout=settings.GEMINI_TIMEOUT) as res:
-                text = _text(json.loads(res.read()))
-            if text:
-                return text, model
-            log.warning("Gemini (%s) bo'sh javob qaytardi", model)
-            last = "ai_unavailable"
-        except urllib.error.HTTPError as e:
-            log.warning("Gemini HTTP %s (%s): %s", e.code, model, e.read()[:300])
-            if e.code in (401, 403):
-                raise AIUnavailable({"detail": "Gemini API kaliti noto'g'ri yoki ruxsati yo'q.", "code": "ai_auth"})
-            if e.code == 429:
-                raise AIUnavailable({"detail": "Gemini so'rovlar chegarasi tugadi. Birozdan keyin urinib ko'ring.",
-                                     "code": "ai_rate_limit"})
-            last = "ai_model" if e.code == 404 else "ai_busy" if e.code in (500, 503) else "ai_unavailable"
-        except (urllib.error.URLError, TimeoutError, OSError) as e:
-            log.warning("Gemini ulanish xatosi (%s): %s", model, e)
-            last = "ai_unavailable"
-    raise AIUnavailable({"detail": ERRORS[last], "code": last})
-
-
 def summarize(*, business_id: int, recs: list[dict], totals: dict, refresh=False) -> dict:
     """{"text", "model", "cached"}. Bir xil ma'lumot uchun javob 1 soat keshda saqlanadi (keraksiz xarajat yo'q)."""
-    if not settings.GEMINI_API_KEY:
+    if not llm.configured():
         raise AIUnavailable({"detail": "AI xulosasi sozlanmagan: backend/.env fayliga GEMINI_API_KEY qo'shing.",
                              "code": "ai_not_configured"})
     if not recs:
@@ -133,7 +65,7 @@ def summarize(*, business_id: int, recs: list[dict], totals: dict, refresh=False
         hit = cache.get(key)
         if hit:
             return {**hit, "cached": True}
-    text, model = _call_gemini(PROMPT.format(data=data))
+    text, model = llm.generate([llm.user_message(PROMPT.format(data=data))])
     result = {"text": text, "model": model}
     cache.set(key, result, CACHE_SECONDS)
     return {**result, "cached": False}

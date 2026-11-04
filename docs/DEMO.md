@@ -40,7 +40,7 @@ Mijozlar (kassada telefon bilan topiladi):
 
 Har bir mijozda o'tgan xaridlardan yig'ilgan bonus bor. Aksiyalar: "Futbolka haftaligi" (−10%, faol) va "Yangi yil" (−15%, boshlanmagan).
 
-Rasmlar demo ma'lumotda yo'q: taqdimot paytida 2–3 ta tovarga telefondan rasm yuklab ko'rsatish yaxshi taassurot qoldiradi.
+Tovarlarning rasmlari bor: `seed_demo` ularni birinchi marta Unsplash'dan yuklab, `backend/.cache/demo-images` ga saqlaydi, keyingi `--reset` lar internetsiz ishlaydi. Shuning uchun taqdimotdan oldin internet bor joyda bir marta `seed_demo --reset` qiling. Taqdimot paytida bitta tovarning rasmini telefondan almashtirib ko'rsatish ham yaxshi taassurot qoldiradi.
 
 ## 1. Muammo (1 daqiqa)
 
@@ -126,6 +126,12 @@ Mavsumiy aksiya: **+ Yangi aksiya** → Qamrov "Mavsum bo'yicha" → "Kuz-Qish":
 
 **👤 Mijozlar**: xaridlar soni va summasi, bonus balansi (🎁 tugmasi tarixini ochadi), imtiyoz toifalarini boshqarish.
 
+Sotuvchi oynasida yuqoridagi **✨ Yordamchi**ni oching:
+- Sotuvchiga faqat uning ishiga oid mavzular chiqadi (Savdo qilish, Bonus bilan to'lash, Qaytarish...). Kartochka bosilsa qadamlar darhol chiqadi, ostida "Kassaga o'tish →".
+- "Mijoz bonusini qanday ishlatadi?" deb yozing: javob 1–2 soniyada, yozilgan sari chiqadi, tugma nomlari dasturdagidek.
+- "Yangi xodim qanday qo'shaman?" → "Bu ishni do'kon egasi yoki menejer bajaradi". "Bugun qancha sotdik?" → raqam aytmaydi, «Savdolar» bo'limini ko'rsatadi.
+- Tushuntiring: yordamchi faqat yozilgan qo'llanmaga tayanadi, do'kon ma'lumotlari AI'ga yuborilmaydi, xodimning o'rniga ish qilmaydi — o'rgatadi.
+
 ## 8. Xodimlar va filiallar (1 daqiqa)
 
 Egasi bo'lib: **Xodimlar** → **+ Yangi xodim**: telefon, parol, rol "Sotuvchi", filial tanlang. Mavjud xodimni tahrirlab, "qaytarish uchun mas'ul" belgisini ko'rsating.
@@ -148,7 +154,8 @@ Brauzerni telefon o'lchamiga keltiring (F12 → telefon belgisi): pastki menyu, 
 - **Ma'lumot qayerda saqlanadi?** PostgreSQL bazasida. Har bir do'kon faqat o'z ma'lumotini ko'radi, bu testlar bilan tekshirilgan.
 - **Ikki sotuvchi bir vaqtda oxirgi donani sotsa-chi?** Faqat bittasi sotadi, ikkinchisiga "qoldiq yetarli emas" chiqadi. Qoldiq hech qachon manfiy bo'lmaydi.
 - **Tovar o'chirilsa, hisobotlar buziladimi?** Yo'q. Savdo tarixi bor tovar o'chirilmaydi, arxivlanadi.
-- **Testlar bormi?** Backend'da 122 ta avtomatik test bor: savdo, qoldiq, ko'chirish, qaytarish, hisobot, huquqlar, aksiya, imtiyoz, bonus va tavsiyalar.
+- **AI yordamchi noto'g'ri yo'l ko'rsatsa-chi?** U faqat dastur qo'llanmasiga tayanadi; qo'llanmada yo'q narsani so'rasa "ma'lumotim yo'q, egasiga murojaat qiling" deydi. Tayyor mavzular esa AI'siz, oldindan yozilgan matn.
+- **Testlar bormi?** Backend'da 133 ta avtomatik test bor: savdo, qoldiq, ko'chirish, qaytarish, hisobot, huquqlar, aksiya, imtiyoz, bonus, tavsiyalar va yordamchi.
 - **Aksiya, imtiyoz va bonus birga qo'llansa, do'kon zarar ko'rmaydimi?** Aksiya va imtiyoz ustma-ust qo'shilmaydi, ikkisidan mijoz uchun foydalirog'i olinadi. Avtomatik chegirma ham, bonus ham narxni tannarxdan pastga tushirmaydi. Bonus chekning ko'pi bilan 35 foizini qoplaydi.
 - **Sotilmay qolishi mumkin bo'lgan tovarga qanday chegirma qo'llaysiz?** Tizim har bir tovar uchun oxirgi sotuvdan beri kunlarni, qoldiq hozirgi tezlikda necha kunga yetishini va mavsum tugashini hisoblaydi. Shundan xavf darajasi va chegirma (30/20/10%) chiqadi, sababi bilan. Menejer bir bosishda aksiya yaratadi, keyin natijasini (aksiyadan oldin va keyin sotilgan dona) ko'radi.
 - **AI noto'g'ri tavsiya bersa-chi?** AI tavsiya bermaydi, faqat qoidalar chiqargan ro'yxatni tushuntiradi. Foizni va tovarni qoidalar hisoblaydi, har birining sababi ko'rsatiladi.

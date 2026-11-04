@@ -1,6 +1,8 @@
+import { useCallback, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 
 import { useAuth } from "../auth/AuthContext";
+import { Assistant } from "./Assistant";
 import { Logo } from "./Logo";
 
 interface NavItem { to: string; label: string; icon: string; end?: boolean; managerOnly?: boolean; mobile?: boolean }
@@ -30,6 +32,8 @@ export function Layout() {
   const { me, branch, setBranchId, logout, isManager } = useAuth();
   const branches = me?.branches ?? [];
   const nav = navFor(isManager);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const closeHelp = useCallback(() => setHelpOpen(false), []);
 
   return (
     <div className="app">
@@ -59,6 +63,9 @@ export function Layout() {
             )}
           </div>
           <div className="row" style={{ gap: 8 }}>
+            <button className="btn btn-secondary btn-sm" onClick={() => setHelpOpen(true)} aria-haspopup="dialog">
+              ✨ Yordamchi
+            </button>
             <button className="btn btn-secondary btn-sm" onClick={logout}>Chiqish</button>
           </div>
         </header>
@@ -69,6 +76,8 @@ export function Layout() {
           )}
         </main>
       </div>
+
+      <Assistant open={helpOpen} onClose={closeHelp} />
 
       <nav className="bottom-nav" aria-label="Asosiy menyu">
         {nav.filter((n) => n.mobile).map((n) => (

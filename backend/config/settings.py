@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "apps.pricing",
     "apps.customers",
     "apps.insights",
+    "apps.assistant",
 ]
 
 MIDDLEWARE = [
@@ -143,6 +144,9 @@ LOGGING = {
 # Gemini: tavsiyalar bo'yicha AI xulosasi (ixtiyoriy). Kalit bo'lmasa, tavsiyalar baribir ishlaydi.
 GEMINI_API_KEY = env("GEMINI_API_KEY", default="")
 # Vergul bilan bir nechta model: birinchisi band yoki eskirgan bo'lsa, keyingisi sinaladi.
-# "gemini-flash-latest" doim eng yangi flash modelga ishora qiladi (aniq versiya eskirib qolishi mumkin).
-GEMINI_MODEL = env("GEMINI_MODEL", default="gemini-flash-latest,gemini-3.5-flash")
-GEMINI_TIMEOUT = env.int("GEMINI_TIMEOUT", default=40)
+# "Lite" modellar javobdan oldin "o'ylamaydi", shuning uchun 1-5 soniyada javob beradi (oddiy flash 20+ soniya).
+# "...-latest" nomi doim eng yangi modelga ishora qiladi (aniq versiya eskirib qolishi mumkin).
+GEMINI_MODEL = env("GEMINI_MODEL", default="gemini-flash-lite-latest,gemini-3.5-flash-lite")
+GEMINI_TIMEOUT = env.int("GEMINI_TIMEOUT", default=30)
+# Yordamchi: bitta xodim bir soatda nechta savol bera oladi.
+ASSISTANT_HOURLY_LIMIT = env.int("ASSISTANT_HOURLY_LIMIT", default=30)

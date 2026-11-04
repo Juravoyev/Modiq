@@ -15,6 +15,7 @@ Arxitektura va reja: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - **Mijozlar va imtiyoz:** mijoz telefon raqami bilan, imtiyoz toifalari (masalan, VIP 10%). Aksiya bilan ustma-ust qo'shilmaydi, mijoz uchun foydalirog'i olinadi.
 - **Bonus (keshbek):** har xariddan 3% bonus, 24 soatdan keyin ishlatiladi, chekning ko'pi bilan 35 foizi bonus bilan to'lanadi.
 - **Tavsiyalar:** sotilmay qolish xavfi bo'lgan tovarlar (uzoq sotilmagan, sekin sotilayotgan, mavsumi tugayotgan), tavsiya qilingan chegirma va sabablari, bir bosishda aksiya yaratish. Ixtiyoriy Gemini xulosasi.
+- **✨ Yordamchi:** HEMIS'dagi kabi yon panel. Xodimga dasturdan foydalanishni o'rgatadi: rolga mos tayyor mavzular (darhol, AI'siz) va erkin savollar (Gemini, javob yozilgan sari chiqadi). Faqat qo'llanmaga tayanadi, do'kon ma'lumotlarini bilmaydi va xodimning o'rniga ish qilmaydi.
 - **Hisobot:** tushum, taxminiy yalpi foyda, qaytarishlar, qoldiq qiymati.
 - **Rollar:** egasi, menejer, sotuvchi. Sotuvchi tannarxni ko'rmaydi, qo'lda chegirmasi cheklangan (standart 10%).
 
@@ -39,16 +40,17 @@ API hujjati: http://localhost:8000/api/docs/
 
 Docker bilan: `backend/.env` yarating, keyin loyiha ildizida `docker compose up --build`.
 
-### AI xulosasi (ixtiyoriy)
+### AI: yordamchi va tavsiyalar xulosasi (ixtiyoriy)
 
-"Tavsiyalar" sahifasidagi qisqa xulosani Google Gemini yozadi. Buning uchun https://aistudio.google.com/apikey dan kalit oling va `backend/.env` ga qo'shing:
+"✨ Yordamchi"dagi erkin savollarga javobni va "Tavsiyalar" sahifasidagi qisqa xulosani Google Gemini yozadi. Buning uchun https://aistudio.google.com/apikey dan kalit oling va `backend/.env` ga qo'shing:
 
 ```bash
 GEMINI_API_KEY=sizning-kalitingiz
-GEMINI_MODEL=gemini-flash-latest,gemini-3.5-flash    # ixtiyoriy, vergul bilan zaxira model
+GEMINI_MODEL=gemini-flash-lite-latest,gemini-3.5-flash-lite   # ixtiyoriy, vergul bilan zaxira model
+ASSISTANT_HOURLY_LIMIT=30                                    # bitta xodim soatiga nechta savol bera oladi
 ```
 
-Keyin backendni qayta ishga tushiring. Google eski modellarni vaqti-vaqti bilan yopadi: "model topilmadi" xabari chiqsa, kalitingizga ochiq modellarni https://aistudio.google.com da ko'ring va `GEMINI_MODEL` ni almashtiring. Kalit bo'lmasa ham tavsiyalar to'liq ishlaydi: qaysi tovarga necha foiz chegirma berishni qoidalar hisoblaydi, Gemini faqat tayyor ro'yxatni umumlashtiradi. Gemini'ga faqat tovar nomlari va umumlashtirilgan raqamlar yuboriladi.
+Keyin backendni qayta ishga tushiring. Google eski modellarni vaqti-vaqti bilan yopadi: "model topilmadi" xabari chiqsa, kalitingizga ochiq modellarni https://aistudio.google.com da ko'ring va `GEMINI_MODEL` ni almashtiring. "Lite" modellar 1–2 soniyada javob beradi (oddiy flash 20 soniyadan ko'p). Kalit bo'lmasa ham yordamchining tayyor mavzulari va tavsiyalar to'liq ishlaydi: qaysi tovarga necha foiz chegirma berishni qoidalar hisoblaydi, Gemini faqat tayyor ro'yxatni umumlashtiradi. Gemini'ga faqat tovar nomlari va umumlashtirilgan raqamlar yuboriladi.
 
 ## Frontendni lokal ishga tushirish
 
@@ -66,12 +68,14 @@ Sinab ko'rish tartibi: Ro'yxatdan o'tish → Tovarlar → Yangi tovar (rang va o
 
 ## Demo ma'lumotlar
 
-Taqdimot uchun tayyor do'kon (3 filial, 4 xodim, 10 tovar, 30 kunlik savdo, qaytarishlar, 6 mijoz va imtiyoz toifalari, bonuslar, aksiyalar, sotilmay turgan tovarlar):
+Taqdimot uchun tayyor do'kon (3 filial, 4 xodim, 10 tovar, 30 kunlik savdo, qaytarishlar, 6 mijoz va imtiyoz toifalari, bonuslar, aksiyalar, sotilmay turgan tovarlar, tovar rasmlari):
 
 ```bash
 cd backend
-python manage.py seed_demo          # qayta yaratish: seed_demo --reset
+python manage.py seed_demo          # qayta yaratish: seed_demo --reset, rasmsiz: --no-images
 ```
+
+Tovar rasmlari birinchi marta Unsplash'dan (bepul litsenziya) yuklanadi va `backend/.cache/demo-images` ga saqlanadi: keyingi safar internet kerak emas. Internet bo'lmasa, demo rasmsiz yaratiladi.
 
 Kirish: `+998 90 000 00 01` (egasi), `...02` (menejer), `...03` va `...04` (sotuvchilar), parol `Demo-12345`.
 Kassada sinash uchun mijozlar: `90 123 45 01` (VIP 10%), `...02` va `...03` (Doimiy mijoz 5%), `...06` (Xodim 15%).
@@ -84,5 +88,5 @@ cd backend
 python manage.py test
 ```
 
-122 ta avtomatik test: savdo, qoldiq, ko'chirish, qaytarish, hisobot, huquqlar, aksiya, imtiyoz, bonus va tavsiyalar.
+133 ta avtomatik test: savdo, qoldiq, ko'chirish, qaytarish, hisobot, huquqlar, aksiya, imtiyoz, bonus, tavsiyalar va yordamchi (AI so'rovlari soxta javob bilan tekshiriladi).
 Testlar PostgreSQL talab qiladi (qulflash va constraintlar tekshiriladi), `.env` dagi `DATABASE_URL` foydalanuvchisiga `CREATEDB` huquqi kerak.

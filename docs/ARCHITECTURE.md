@@ -21,7 +21,17 @@ Backend modullari (`backend/apps/`):
 
 | `insights` | Sotilmay qolish xavfi: qoidalar bo'yicha tavsiya (`services.build_recommendations`), InsightSettings (chegaralar), Dismissal (rad etilgan tavsiya), Gemini xulosasi (`ai.py`) |
 
+| `assistant` | "✨ Yordamchi": dasturdan foydalanishni o'rgatadi. Qo'llanma (`guide.py`), rolga mos tayyor mavzular, erkin savol (stream) |
+
+`common/llm.py` — til modeli bilan aloqa (hozir Gemini; keyin OpenRouter ham shu yerga qo'shiladi): zaxira modellar, tushunarli xatolar, `generate` va `stream`.
+
 Keyingi bosqichlarda: `reports` (CSV/PDF eksport).
+
+**Yordamchi** (`assistant/`). Bilim manbai — `guide.py` dagi qo'llanma (har bir mavzu: sarlavha, qadamlar, rol, sahifa havolasi). Dasturda tugma yoki sahifa o'zgarsa, qo'llanma ham yangilanishi kerak.
+1. Tayyor mavzular xodimning roliga qarab beriladi (sotuvchi, menejer, egasi, qaytarishni tasdiqlovchi) va AI'siz, darhol ko'rsatiladi.
+2. Erkin savolga AI faqat shu xodimga ruxsat etilgan qo'llanma qismlariga tayanib javob beradi. Qo'llanmada yo'q narsani o'ylab topmaydi, ruxsat etilmagan ish haqida "egasi yoki menejer bajaradi" deydi, joriy sahifani biladi.
+3. Do'kon ma'lumotlari (savdo, qoldiq, mijozlar) AI'ga yuborilmaydi; bunday savolga raqam aytmaydi, qaysi bo'limda ko'rishni aytadi. Xodimning o'rniga ish qilmaydi, faqat qadamlarni tushuntiradi.
+4. Javob bo'lak-bo'lak (`StreamingHttpResponse`, `text/plain`) keladi; xato javob boshlanishidan oldin JSON bilan qaytadi. Bir xil birinchi savol 24 soat keshlanadi, bitta xodim soatiga `ASSISTANT_HOURLY_LIMIT` (30) tagacha savol beradi.
 
 **Sotilmay qolish xavfi** (`insights/services.py`). Qarorni qoidalar chiqaradi, har bir tavsiyada sababi matn bilan beriladi:
 1. Yuqori xavf: `no_sale_days` (60) kun bitta ham sotilmagan → `high_discount` (30%).
@@ -81,6 +91,8 @@ Hujjat: `/api/docs/` (Swagger), sxema: `/api/schema/`.
 | `POST /api/insights/recommendations/summary/?refresh=1` | Gemini xulosasi (503 `ai_not_configured`/`ai_unavailable` — tavsiyalar baribir ishlaydi) |
 | `POST /api/insights/recommendations/dismiss/` | Tavsiyani 30 kunga yashirish |
 | `/api/insights/settings/` | Qoidalar chegaralari |
+| `GET /api/assistant/topics/` | Yordamchining rolga mos tayyor mavzulari, `ai_configured` |
+| `POST /api/assistant/ask/` | Erkin savol (`question`, `page`, `history`). Javob `text/plain` stream; 429 `assistant_limit`, 503 `ai_*` |
 | `GET /api/customers/{id}/bonus/` | Mijozning bonus tarixi; ro'yxatda `bonus_available`, `bonus_pending` |
 | `/api/sales/` | `POST` savdoni yakunlash, `GET` tarix (`returned_quantity`, `return_deadline` bilan) |
 | `/api/sales/returns/` + `/approve/`, `/reject/` | Yaroqsiz tovarni qaytarish (24 soat ichida) |
@@ -115,6 +127,7 @@ Hujjat: `/api/docs/` (Swagger), sxema: `/api/schema/`.
 | 12 | Imtiyoz: aksiya bilan qo'shilmaydi, tannarxdan past emas, toifani faqat menejer beradi | ✅ `customers/tests/test_customers.py` |
 | 13 | Bonus: 3% pul bilan to'langanidan, 35% chegara, tannarxdan past emas, 24 soat kutish, takroriy so'rovda ikki marta yozilmaydi, qaytarishda qaytarish/bekor qilish | ✅ `customers/tests/test_bonus.py` |
 | 14 | Tavsiyalar: yuqori/o'rta/past xavf, mavsum, yangi tovar baholanmaydi, tannarx chegarasi, faol aksiya, rad etish, Gemini (soxta javob bilan) | ✅ `insights/tests/test_recommendations.py` |
+| 15 | Yordamchi: rolga mos mavzular, qo'llanma va sahifa AI'ga beriladi, do'kon ma'lumoti yuborilmaydi, kesh, zaxira model, soatlik limit | ✅ `assistant/tests/test_assistant.py` |
 
 ## 6. Frontend tuzilishi (`frontend/src/`)
 

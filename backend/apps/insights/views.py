@@ -5,6 +5,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.common import llm
 from apps.common.permissions import IsBusinessMember, IsManager
 
 from . import ai
@@ -43,7 +44,7 @@ class RecommendationsView(APIView):
     def get(self, request):
         recs = build_recommendations(business=request.business, branches=_branches(request))
         return Response(_money({"summary": summary_totals(recs), "results": recs,
-                                "ai_configured": bool(ai.settings.GEMINI_API_KEY)}))
+                                "ai_configured": llm.configured()}))
 
 
 class SummaryView(APIView):
