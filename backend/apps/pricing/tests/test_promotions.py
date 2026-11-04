@@ -185,6 +185,8 @@ class PromotionApiTests(TestCase):
         r = self.c.get(f"/api/pricing/promotions/{promo.id}/")
         self.assertEqual((r.data["sales_count"], r.data["units_sold"], r.data["discount_given"]),
                          (1, 2, "40000.00"))
+        # Aksiya kechadan boshlangan (2 kun): aksiya davomida 2 dona, undan oldingi 2 kunda 0 dona.
+        self.assertEqual(r.data["effect"], {"days": 2, "units_during": 2, "units_before": 0})
         r = self.c.delete(f"/api/pricing/promotions/{promo.id}/")
         self.assertEqual((r.status_code, r.data["code"]), (400, "protected"))
 

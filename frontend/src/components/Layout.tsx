@@ -9,6 +9,7 @@ interface NavItem { to: string; label: string; icon: string; end?: boolean; mana
 export const NAV: NavItem[] = [
   { to: "/", label: "Kassa", icon: "🧾", end: true, mobile: true },
   { to: "/dashboard", label: "Hisobot", icon: "📊", managerOnly: true },
+  { to: "/insights", label: "Tavsiyalar", icon: "💡", managerOnly: true },
   { to: "/products", label: "Tovarlar", icon: "👕", mobile: true },
   { to: "/receipts", label: "Kirim", icon: "📥", managerOnly: true },
   { to: "/transfers", label: "Ko'chirish", icon: "🔁", managerOnly: true },

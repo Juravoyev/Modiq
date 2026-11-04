@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { api, ApiError, qs } from "../api/client";
 import type {
@@ -77,11 +78,15 @@ interface FormState {
   starts_on: string; ends_on: string;
 }
 
-function initialForm(p: Promotion | null): FormState {
+/** "Tavsiyalar" sahifasidan kelgan tayyor aksiya (tanlangan tovar va tavsiya qilingan foiz). */
+export interface PromotionPrefill { name: string; value: string; products: { id: number; name: string }[] }
+
+function initialForm(p: Promotion | null, prefill?: PromotionPrefill): FormState {
   if (!p) {
     const t = todayIso();
-    return { name: "", kind: "percent", value: "", scope: "all", category: "", season: "", products: [],
-             starts_on: t, ends_on: addDays(t, 13) };
+    const base: FormState = { name: "", kind: "percent", value: "", scope: "all", category: "", season: "", products: [],
+                              starts_on: t, ends_on: addDays(t, 13) };
+    return prefill ? { ...base, ...prefill, scope: "products" } : base;
   }
   return {
     name: p.name, kind: p.kind, value: String(Number(p.value)), scope: p.scope,
@@ -130,8 +135,10 @@ function ProductPicker({ value, onChange, error }: {
   );
 }
 
-function PromotionForm({ promo, onSaved, onCancel }: { promo: Promotion | null; onSaved: (msg: string) => void; onCancel: () => void }) {
-  const [form, setForm] = useState<FormState>(() => initialForm(promo));
+function PromotionForm({ promo, prefill, onSaved, onCancel }: {
+  promo: Promotion | null; prefill?: PromotionPrefill; onSaved: (msg: string) => void; onCancel: () => void;
+}) {
+  const [form, setForm] = useState<FormState>(() => initialForm(promo, prefill));
   const [fields, setFields] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -169,6 +176,7 @@ function PromotionForm({ promo, onSaved, onCancel }: { promo: Promotion | null; 
           season: form.season ? Number(form.season) : null,
           products: form.products.map((p) => p.id),
           starts_on: form.starts_on, ends_on: form.ends_on,
+          ...(promo ? {} : { source: prefill ? "recommendation" : "manual" }),
         },
       });
       onSaved(promo ? "Aksiya saqlandi." : "Aksiya yaratildi. Muddat ichida kassada avtomatik qo'llanadi.");
@@ -184,7 +192,12 @@ function PromotionForm({ promo, onSaved, onCancel }: { promo: Promotion | null; 
 
   return (
     <form className="card stack" onSubmit={submit}>
-      <h2 style={{ margin: 0 }}>{promo ? `Tahrirlash: ${promo.name}` : "Yangi aksiya"}</h2>
+      <h2 style={{ margin: 0 }}>{promo ? `Tahrirlash: ${promo.name}` : prefill ? "Tavsiya bo'yicha aksiya" : "Yangi aksiya"}</h2>
+      {prefill && (
+        <p className="muted" style={{ margin: 0 }}>
+          Tovar va chegirma tavsiyadan olindi. Muddatni tekshirib, saqlang. Natijasi shu sahifada ko'rinadi.
+        </p>
+      )}
       {error && <ErrorBox message={error} />}
       {refs.error && <ErrorBox message={refs.error} onRetry={refs.reload} />}
       <div className="grid-2">
@@ -321,8 +334,16 @@ function SettingsCard() {
 }
 
 export function PromotionsPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [prefill, setPrefill] = useState<PromotionPrefill | undefined>(
+    () => (location.state as { prefill?: PromotionPrefill } | null)?.prefill);
   const [status, setStatus] = useState<PromotionStatus | "">("active");
-  const [editing, setEditing] = useState<Promotion | "new" | null>(null);
+  const [editing, setEditing] = useState<Promotion | "new" | null>(prefill ? "new" : null);
+  // Sahifa yangilanganda forma qayta ochilmasligi uchun tarixdagi holat tozalanadi.
+  useEffect(() => {
+    if (location.state) navigate(location.pathname, { replace: true, state: null });
+  }, [location, navigate]);
   const [message, setMessage] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const list = useAsync(
@@ -355,8 +376,9 @@ export function PromotionsPage() {
       {actionError && <ErrorBox message={actionError} />}
       {editing && (
         <PromotionForm key={editing === "new" ? "new" : editing.id} promo={editing === "new" ? null : editing}
-                       onCancel={() => setEditing(null)}
-                       onSaved={(msg) => { setEditing(null); setMessage(msg); list.reload(); }} />
+                       prefill={editing === "new" ? prefill : undefined}
+                       onCancel={() => { setEditing(null); setPrefill(undefined); }}
+                       onSaved={(msg) => { setEditing(null); setPrefill(undefined); setMessage(msg); list.reload(); }} />
       )}
 
       <div className="row" role="radiogroup" aria-label="Holat">
@@ -382,17 +404,23 @@ export function PromotionsPage() {
               <tbody>
                 {list.data.map((p) => (
                   <tr key={p.id}>
-                    <td><b>{p.label}</b></td>
+                    <td>
+                      <b>{p.label}</b>
+                      {p.source === "recommendation" && <div><span className="badge badge-neutral">💡 Tavsiyadan</span></div>}
+                    </td>
                     <td>{scopeText(p)}</td>
                     <td className="num" style={{ whiteSpace: "nowrap" }}>{day(p.starts_on)} – {day(p.ends_on)}</td>
                     <td><span className={`badge ${STATUS_BADGE[p.status]}`}>{p.status_display}</span></td>
                     <td className="right num">
+                      {p.effect && (
+                        <div title={`Aksiyaning ${p.effect.days} kuni va undan oldingi ${p.effect.days} kun`}>
+                          Oldin {p.effect.units_before} → aksiyada <b>{p.effect.units_during}</b> dona
+                          <div className="muted">{p.effect.days} kunlik taqqoslash</div>
+                        </div>
+                      )}
                       {p.sales_count > 0 ? (
-                        <>
-                          <div>{p.units_sold} dona · {p.sales_count} savdo</div>
-                          <div className="muted">Chegirma: {money(p.discount_given)}</div>
-                        </>
-                      ) : <span className="muted">Hali sotilmagan</span>}
+                        <div className="muted">{p.sales_count} savdo · chegirma {money(p.discount_given)}</div>
+                      ) : !p.effect && <span className="muted">Hali boshlanmagan</span>}
                     </td>
                     <td>
                       <div className="row" style={{ gap: 6, flexWrap: "nowrap" }}>

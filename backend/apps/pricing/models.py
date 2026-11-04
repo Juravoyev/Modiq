@@ -59,6 +59,10 @@ class Promotion(BusinessOwnedModel):
         SEASON = "season", "Mavsum"
         PRODUCTS = "products", "Tanlangan tovarlar"
 
+    class Source(models.TextChoices):
+        MANUAL = "manual", "Qo'lda"
+        RECOMMENDATION = "recommendation", "Tavsiyadan"
+
     class Status(models.TextChoices):
         SCHEDULED = "scheduled", "Boshlanmagan"
         ACTIVE = "active", "Faol"
@@ -77,6 +81,7 @@ class Promotion(BusinessOwnedModel):
     ends_on = models.DateField("Tugash sanasi (shu kun ham kiradi)")
     # False — muddatidan oldin qo'lda to'xtatilgan.
     is_active = models.BooleanField(default=True)
+    source = models.CharField(max_length=16, choices=Source.choices, default=Source.MANUAL)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
 
     class Meta:
@@ -99,6 +104,16 @@ class Promotion(BusinessOwnedModel):
         if today > self.ends_on:
             return self.Status.ENDED
         return self.Status.ACTIVE
+
+    def product_q(self, prefix="variant__product__"):
+        """Aksiya qamroviga kiradigan tovarlar filtri (SaleLine uchun prefiks bilan)."""
+        if self.scope == self.Scope.CATEGORY:
+            return Q(**{f"{prefix}category_id": self.category_id})
+        if self.scope == self.Scope.SEASON:
+            return Q(**{f"{prefix}season_id": self.season_id})
+        if self.scope == self.Scope.PRODUCTS:
+            return Q(**{f"{prefix}id__in": [p.id for p in self.products.all()]})
+        return Q()
 
     def applies_to(self, product, product_ids_cache=None) -> bool:
         if self.scope == self.Scope.ALL:

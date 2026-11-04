@@ -192,11 +192,14 @@ export interface Promotion {
   status: PromotionStatus;
   status_display: string;
   label: string;
+  source: "manual" | "recommendation";
   created_at: string;
   created_by_name: string;
   sales_count: number;
   units_sold: number;
   discount_given: string;
+  /** Aksiya davomida va undan oldingi xuddi shuncha kunda sotilgan dona (boshlanmagan aksiyada null). */
+  effect: { days: number; units_during: number; units_before: number } | null;
 }
 
 export interface PricingSettings {
@@ -285,4 +288,52 @@ export interface BonusTransaction {
   sale: number | null;
   sale_return: number | null;
   available_at: string;
+}
+
+export type RiskLevel = "high" | "medium" | "low";
+
+export interface Recommendation {
+  product_id: number;
+  name: string;
+  article: string;
+  image: string | null;
+  category_name: string | null;
+  season_name: string | null;
+  level: RiskLevel;
+  level_display: string;
+  /** Tavsiya qilingan chegirma (tannarx chegarasi bilan). */
+  discount: number;
+  wanted_discount: number;
+  safe_discount: number;
+  reasons: string[];
+  units: number;
+  value_cost: string;
+  value_retail: string;
+  sold_30: number;
+  days_since_sale: number | null;
+  cover_days: number | null;
+  age_days: number;
+  last_sale_at: string | null;
+  active_promotion: { id: number; label: string } | null;
+  can_promote: boolean;
+}
+
+export interface RecommendationsResponse {
+  summary: { count: number; high: number; medium: number; low: number; frozen_value: string };
+  results: Recommendation[];
+  ai_configured: boolean;
+}
+
+export interface AiSummary { text: string; model: string | null; cached: boolean }
+
+export interface InsightSettings {
+  no_sale_days: number;
+  high_discount: number;
+  cover_days_medium: number;
+  medium_discount: number;
+  cover_days_low: number;
+  low_discount: number;
+  season_end_days: number;
+  season_discount: number;
+  min_age_days: number;
 }

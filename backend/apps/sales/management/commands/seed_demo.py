@@ -15,7 +15,7 @@ from django.utils import timezone
 from apps.accounts.models import Branch, Business, Membership, User
 from apps.catalog.models import Brand, Category, Color, Product, Season, Size
 from apps.catalog.services import generate_variants
-from apps.inventory.models import Receipt, ReceiptLine, Stock, Transfer, TransferLine
+from apps.inventory.models import Receipt, ReceiptLine, Stock, StockMovement, Transfer, TransferLine
 from apps.inventory.services import confirm_receipt, receive_transfer, send_transfer
 from apps.customers.bonus import BONUS_HOLD
 from apps.customers.models import BonusTransaction, Customer, CustomerGroup
@@ -77,13 +77,6 @@ CUSTOMERS = [
     ("+998901234506", "Zarina Hamidova", "Xodim"),
 ]
 GROUPS = [("Doimiy mijoz", 5), ("VIP", 10), ("Xodim", 15)]
-
-
-def _season_end(season, today):
-    """Mavsumning bugundan keyingi eng yaqin oxirgi kuni."""
-    year = today.year + (1 if season.end_month < today.month else 0)
-    nxt = date(year + 1, 1, 1) if season.end_month == 12 else date(year, season.end_month + 1, 1)
-    return nxt - timedelta(days=1)
 
 
 def _at(day, hour, minute=0):
@@ -156,8 +149,10 @@ class Command(BaseCommand):
         stores = [self.branches["Chilonzor do'koni"], self.branches["Yunusobod do'koni"]]
 
         self.sellable = []
+        # Tovar savdolardan ancha oldin kelgan: sotilmagan kurtkalar tavsiyalarda "60 kundan beri sotilmagan" bo'ladi.
+        received = start - timedelta(days=40)
         receipt = Receipt.objects.create(business=business, branch=warehouse, supplier_name="Toshkent Tekstil MChJ",
-                                         document_number="TT-1024", document_date=start - timedelta(days=2),
+                                         document_number="TT-1024", document_date=received,
                                          created_by=owner.user)
         for (name, article, cat, brand, season, buy, sell, c_names, s_names, qty, sells) in PRODUCTS:
             if cat not in categories:
@@ -186,8 +181,11 @@ class Command(BaseCommand):
             Transfer.objects.filter(pk=t.pk).update(created_at=_at(start - timedelta(days=1), 10),
                                                     sent_at=_at(start - timedelta(days=1), 11),
                                                     received_at=_at(start - timedelta(days=1), 15))
-        Receipt.objects.filter(pk=receipt.pk).update(created_at=_at(start - timedelta(days=2), 9),
-                                                     confirmed_at=_at(start - timedelta(days=2), 12))
+        Receipt.objects.filter(pk=receipt.pk).update(created_at=_at(received, 9), confirmed_at=_at(received, 12))
+        # Ombor jurnali ham hujjat sanasiga ko'chadi (tavsiyalar tovar omborda qancha turganini shundan oladi).
+        StockMovement.objects.filter(ref_type="receipt", ref_id=receipt.pk).update(created_at=_at(received, 12))
+        StockMovement.objects.filter(business=business, ref_type="transfer").update(
+            created_at=_at(start - timedelta(days=1), 15))
 
         groups = {n: CustomerGroup.objects.create(business=business, name=n, discount_percent=p) for n, p in GROUPS}
         self.customers = [Customer.objects.create(business=business, phone=ph, full_name=nm,
@@ -206,6 +204,7 @@ class Command(BaseCommand):
                         hour, minute = self.rng.randint(10, 20), self.rng.randint(0, 59)
                         when = _at(day, hour, minute)
                         Sale.objects.filter(pk=sale.pk).update(created_at=when)
+                        StockMovement.objects.filter(ref_type="sale", ref_id=sale.pk).update(created_at=when)
                         # Bonus ham savdo vaqtiga ko'chadi: o'tgan kunlardagi bonus allaqachon ishlatish mumkin.
                         BonusTransaction.objects.filter(sale=sale).update(created_at=when,
                                                                           available_at=when + BONUS_HOLD)
@@ -236,10 +235,11 @@ class Command(BaseCommand):
         for v in self.sellable[-4:]:
             ReceiptLine.objects.create(receipt=draft, variant=v, quantity=5, purchase_price=v.effective_purchase_price)
         # Aksiyalar savdolardan keyin yaratiladi: o'tgan kunlardagi savdolarga ta'sir qilmaydi.
-        winter = seasons["Kuz-Qish"]
-        Promotion.objects.create(business=business, name="Kuz-qish mavsumi", kind=Promotion.Kind.PERCENT,
-                                 value=Decimal(20), scope=Promotion.Scope.SEASON, season=winter, starts_on=today,
-                                 ends_on=_season_end(winter, today), created_by=manager.user)
+        # Mavsumiy aksiyani taqdimotda "Tavsiyalar" sahifasidan yaratish ko'rsatiladi.
+        Promotion.objects.create(business=business, name="Futbolka haftaligi", kind=Promotion.Kind.PERCENT,
+                                 value=Decimal(10), scope=Promotion.Scope.CATEGORY, category=categories["Futbolka"],
+                                 starts_on=today - timedelta(days=2), ends_on=today + timedelta(days=5),
+                                 created_by=manager.user)
         new_year = date(today.year, 12, 25) if today < date(today.year, 12, 25) else date(today.year + 1, 12, 25)
         Promotion.objects.create(business=business, name="Yangi yil", kind=Promotion.Kind.PERCENT, value=Decimal(15),
                                  scope=Promotion.Scope.ALL, starts_on=new_year,

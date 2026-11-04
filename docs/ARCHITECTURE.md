@@ -19,7 +19,17 @@ Backend modullari (`backend/apps/`):
 | `customers` | Customer (telefon bilan), CustomerGroup (imtiyoz toifasi: doimiy chegirma foizi), BonusTransaction (bonus jurnali) |
 | `pricing` | Promotion (muddatli aksiya: barcha tovar, kategoriya, mavsum yoki tanlangan tovarlar), PricingSettings, narx hisoblash (`services.price_cart`) |
 
-Keyingi bosqichlarda: `insights` (sotilmay qolish xavfi), `reports`.
+| `insights` | Sotilmay qolish xavfi: qoidalar bo'yicha tavsiya (`services.build_recommendations`), InsightSettings (chegaralar), Dismissal (rad etilgan tavsiya), Gemini xulosasi (`ai.py`) |
+
+Keyingi bosqichlarda: `reports` (CSV/PDF eksport).
+
+**Sotilmay qolish xavfi** (`insights/services.py`). Qarorni qoidalar chiqaradi, har bir tavsiyada sababi matn bilan beriladi:
+1. Yuqori xavf: `no_sale_days` (60) kun bitta ham sotilmagan → `high_discount` (30%).
+2. O'rta xavf: oxirgi 30 kundagi tezlikda qoldiq `cover_days_medium` (90) kundan ko'proqqa yetadi → 20%. Past xavf: `cover_days_low` (60) kun → 10%.
+3. Mavsum: tovar mavsumi `season_end_days` (30) kun ichida tugaydi va qoldiq ulgurmaydi yoki mavsum tugagan → `season_discount` (20%). "Butun yil" mavsumi baholanmaydi.
+4. Bir nechta qoida to'g'ri kelsa, eng katta chegirma olinadi. Chegirma narxni tannarxdan pastga tushirmaydi (eng kam foydali variant bo'yicha cheklanadi). Omborga `min_age_days` (14) kundan kam oldin kelgan tovar baholanmaydi. Faol aksiyasi bor tovarga yangi aksiya taklif qilinmaydi.
+5. "Aksiya yaratish" tavsiya qilingan tovar va foiz bilan aksiya formasini ochadi (`source=recommendation`). Aksiya natijasi (`effect`): aksiya davomida va undan oldingi xuddi shuncha kunda sotilgan dona.
+6. Gemini (`GEMINI_API_KEY`, ixtiyoriy) faqat tayyor ro'yxatdan qisqa xulosa yozadi, foizlarni o'zgartirmaydi. Unga tovar nomlari va umumlashtirilgan raqamlar yuboriladi (mijozlar, xodimlar, do'kon nomi yuborilmaydi). Javob 1 soat keshlanadi. Kalit bo'lmasa yoki Gemini javob bermasa, tavsiyalar baribir ishlaydi.
 
 **Narx hisoblash qoidalari** (`pricing/services.py::price_cart`). Kassaning oldindan hisobi (`POST /api/sales/quote/`) ham, savdoni yakunlash ham shu bitta funksiyadan o'tadi, shuning uchun ekrandagi va bazadagi summa bir xil qoidalar bilan hisoblanadi:
 1. Tovarga to'g'ri keladigan faol aksiyalardan mijoz uchun eng foydalisi olinadi, aksiyalar ustma-ust qo'shilmaydi.
@@ -67,6 +77,10 @@ Hujjat: `/api/docs/` (Swagger), sxema: `/api/schema/`.
 | `/api/pricing/settings/` | Chegirma sozlamalari (yozish: menejer) |
 | `/api/customers/?phone=&search=` | Mijozlar (qo'shish: hamma, toifani belgilash va o'chirish: menejer), `purchases_count`, `total_spent` |
 | `/api/customers/groups/` | Imtiyoz toifalari, 0–50% (yozish: menejer) |
+| `GET /api/insights/recommendations/?branch=` | Sotilmay qolish xavfi bo'lgan tovarlar, tavsiya qilingan chegirma va sabablari (egasi/menejer) |
+| `POST /api/insights/recommendations/summary/?refresh=1` | Gemini xulosasi (503 `ai_not_configured`/`ai_unavailable` — tavsiyalar baribir ishlaydi) |
+| `POST /api/insights/recommendations/dismiss/` | Tavsiyani 30 kunga yashirish |
+| `/api/insights/settings/` | Qoidalar chegaralari |
 | `GET /api/customers/{id}/bonus/` | Mijozning bonus tarixi; ro'yxatda `bonus_available`, `bonus_pending` |
 | `/api/sales/` | `POST` savdoni yakunlash, `GET` tarix (`returned_quantity`, `return_deadline` bilan) |
 | `/api/sales/returns/` + `/approve/`, `/reject/` | Yaroqsiz tovarni qaytarish (24 soat ichida) |
@@ -78,8 +92,8 @@ Hujjat: `/api/docs/` (Swagger), sxema: `/api/schema/`.
 2. ✅ Frontend skeleti: Vite + React + TS, login/ro'yxatdan o'tish, layout (desktop yon menyu, mobil pastki menyu), Kassa, Tovarlar, Kirim, Qoldiq, Savdolar.
 3. ✅ Ko'chirish sahifasi, xodimlar va filiallar sahifasi, tovarni tahrirlash.
 4. ✅ Savdoni qaytarish (faqat yaroqsiz tovar, 24 soat, tasdiqlash huquqi, hisobdan chiqarish). ⏭ Qoldiqni tekshirish (inventarizatsiya tuzatishi).
-5. Aqlli tavsiyalar: sotilmay qolish xavfi qoidalari + "Nega bu tavsiya berildi?" izohi, sozlanadigan chegaralar.
-6. Chegirma boshqaruvi (muddatli, tasdiqlash bilan, tarix).
+5. ✅ Aqlli tavsiyalar: sotilmay qolish xavfi qoidalari (mavsum bilan) + "Nega?" izohi, sozlanadigan chegaralar, Gemini xulosasi.
+6. ✅ Chegirma boshqaruvi: muddatli aksiyalar (mavsum, kategoriya, tovar), natijasi, mijoz imtiyozi, bonus (keshbek), sotuvchi chegarasi.
 7. ✅ Dashboard: tushum, "taxminiy yalpi foyda" (sof foyda emas), qaytarishlar, qoldiq qiymati, sotilmayotgan tovarlar. ⏭ CSV/PDF eksport.
 8. Production: Nginx, HTTPS, backup, CI.
 
@@ -100,6 +114,7 @@ Hujjat: `/api/docs/` (Swagger), sxema: `/api/schema/`.
 | 11 | Aksiya: eng foydalisi, ustma-ust emas, tannarxdan past emas, muddat, qamrov (mavsum/kategoriya/tovar), sotuvchi chegarasi | ✅ `pricing/tests/test_promotions.py` |
 | 12 | Imtiyoz: aksiya bilan qo'shilmaydi, tannarxdan past emas, toifani faqat menejer beradi | ✅ `customers/tests/test_customers.py` |
 | 13 | Bonus: 3% pul bilan to'langanidan, 35% chegara, tannarxdan past emas, 24 soat kutish, takroriy so'rovda ikki marta yozilmaydi, qaytarishda qaytarish/bekor qilish | ✅ `customers/tests/test_bonus.py` |
+| 14 | Tavsiyalar: yuqori/o'rta/past xavf, mavsum, yangi tovar baholanmaydi, tannarx chegarasi, faol aksiya, rad etish, Gemini (soxta javob bilan) | ✅ `insights/tests/test_recommendations.py` |
 
 ## 6. Frontend tuzilishi (`frontend/src/`)
 
@@ -109,7 +124,7 @@ Hujjat: `/api/docs/` (Swagger), sxema: `/api/schema/`.
 | `api/types.ts` | Backend javoblari turlari |
 | `auth/AuthContext.tsx` | Joriy foydalanuvchi, tanlangan filial, login/logout |
 | `components/` | Layout, Logo (izometrik kub), Receipt (chek), umumiy UI (Loading, Empty, ErrorBox, Field, Pagination, StockBadge) |
-| `pages/` | Login, Register, Kassa, Hisobot, Tovarlar, Yangi tovar, Tovarni tahrirlash, Kirim, Ko'chirish, Qoldiq, Savdolar, Qaytarish, Mijozlar, Aksiyalar, Xodimlar, Filiallar, "Yana" (telefon menyusi) |
+| `pages/` | Login, Register, Kassa, Hisobot, Tovarlar, Yangi tovar, Tovarni tahrirlash, Kirim, Ko'chirish, Qoldiq, Savdolar, Qaytarish, Mijozlar, Aksiyalar, Tavsiyalar, Xodimlar, Filiallar, "Yana" (telefon menyusi) |
 | `styles/global.css` | Dizayn tokenlari va komponent klasslari |
 
 Qo'shimcha kutubxona faqat `react-router-dom` (sahifalar orasida yurish). Holat boshqaruvi uchun alohida kutubxona ishlatilmagan.

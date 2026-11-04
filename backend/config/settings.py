@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "apps.sales",
     "apps.pricing",
     "apps.customers",
+    "apps.insights",
 ]
 
 MIDDLEWARE = [
@@ -138,3 +139,8 @@ LOGGING = {
     "handlers": {"console": {"class": "logging.StreamHandler"}},
     "root": {"handlers": ["console"], "level": env("LOG_LEVEL", default="INFO")},
 }
+
+# Gemini: tavsiyalar bo'yicha AI xulosasi (ixtiyoriy). Kalit bo'lmasa, tavsiyalar baribir ishlaydi.
+GEMINI_API_KEY = env("GEMINI_API_KEY", default="")
+GEMINI_MODEL = env("GEMINI_MODEL", default="gemini-2.5-flash")
+GEMINI_TIMEOUT = env.int("GEMINI_TIMEOUT", default=25)

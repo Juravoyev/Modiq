@@ -167,6 +167,7 @@ export function DashboardPage() {
               <h2 style={{ margin: 0 }}>Sotilmay turgan tovarlar</h2>
               <span className="muted">Qoldig'i bor, lekin oxirgi {data.days} kunda bitta ham sotilmagan. Aksiya yoki chegirma uchun nomzodlar.</span>
             </div>
+            <div><Link className="btn btn-primary btn-sm" to="/insights">💡 Tavsiyalar: qaysi tovarga necha foiz chegirma</Link></div>
             {!data.slow_movers.length ? <span className="muted">Bunday tovar yo'q, hammasi sotilyapti.</span> : (
               <table className="table">
                 <thead><tr><th>Tovar</th><th className="right">Qoldiq</th><th className="right">Tannarxda qiymati</th><th /></tr></thead>
