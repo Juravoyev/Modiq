@@ -1,20 +1,26 @@
 """Taqdimot uchun namuna do'kon: filiallar, xodimlar, tovarlar, kirim, ko'chirish, 30 kunlik savdo va qaytarishlar.
 
 Barcha qoldiq o'zgarishlari haqiqiy servislar orqali o'tadi, shuning uchun jurnal va qoldiqlar to'g'ri bo'ladi.
-Ishlatish: python manage.py seed_demo [--reset]
+Tovar rasmlari Unsplash'dan yuklanadi (bepul Unsplash litsenziyasi) va backend/.cache/demo-images ga saqlanadi:
+keyingi safar internet kerak emas. Internet bo'lmasa, demo rasmsiz yaratiladi.
+Ishlatish: python manage.py seed_demo [--reset] [--no-images]
 """
 import random
+import urllib.error
+import urllib.request
 import uuid
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
+from django.conf import settings
+from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.models import Branch, Business, Membership, User
 from apps.catalog.models import Brand, Category, Color, Product, Season, Size
-from apps.catalog.services import generate_variants
+from apps.catalog.services import generate_variants, set_product_image
 from apps.inventory.models import Receipt, ReceiptLine, Stock, StockMovement, Transfer, TransferLine
 from apps.inventory.services import confirm_receipt, receive_transfer, send_transfer
 from apps.customers.bonus import BONUS_HOLD
@@ -67,6 +73,23 @@ PRODUCTS = [
 ]
 
 
+# Artikul -> Unsplash rasmi (photo-... identifikatori). Bepul Unsplash License: tijoriy foydalanish mumkin,
+# muallifni ko'rsatish shart emas. Manba sahifalari: unsplash.com/photos/<id> (sharhda).
+IMAGES = {
+    "FB01": "1618354691373-d851c5c3a990",  # black-crew-neck-t-shirt-6Nub980bI3I
+    "PL02": "1625910513394-ea511bed44ca",  # gray-polo-shirt-on-blue-textile-Y-00g_VgQTc
+    "SH03": "1473966968600-fa801b869a1a",  # man wearing brown fitted pants
+    "JN04": "1624378439575-d8705ad7ae80",  # blue denim jeans on white textile
+    "KY05": "1579664531470-ac357f8f8e2b",  # white-dress-shirt-hanging-on-clothes-hanger-e8sbQNYEwX8
+    "KR06": "1608229751021-ed4bd8677753",  # white-nike-athletic-shoes-on-white-background-A8HaTLON5Gg
+    "TF07": "1668069226492-508742b03147",  # a pair of black shoes
+    "SM08": "1691480250099-a63081ecfcb8",  # a-brown-leather-handbag-on-a-white-background-zxPo13geJ5U
+    "QK09": "1769689387719-f11faac08cbe",  # man wearing a shiny black puffer jacket
+    "SV10": "1574201635302-388dd92a4c3f",  # person-wearing-grey-knit-sweater-mU88MlEFcoU
+}
+IMAGE_URL = "https://images.unsplash.com/photo-{id}?fm=jpg&q=85&w=1200&h=1200&fit=crop"
+IMAGE_CACHE = settings.BASE_DIR / ".cache" / "demo-images"
+
 # telefon, ism, toifa (None — oddiy mijoz)
 CUSTOMERS = [
     ("+998901234501", "Nodira Aliyeva", "VIP"),
@@ -88,8 +111,11 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--reset", action="store_true", help="Avvalgi demo do'konni o'chirib, qaytadan yaratadi.")
+        parser.add_argument("--no-images", action="store_true", help="Tovar rasmlarini yuklamaslik.")
 
-    def handle(self, *args, reset=False, **options):
+    def handle(self, *args, reset=False, no_images=False, **options):
+        # Rasmlar tranzaksiyadan oldin yuklanadi: tarmoq kutilayotganda baza qulflanib turmaydi.
+        self.images = {} if no_images else self._load_images()
         existing = User.objects.filter(phone=OWNER_PHONE).select_related("membership__business").first()
         if existing:
             if not reset:
@@ -102,6 +128,30 @@ class Command(BaseCommand):
         self.stdout.write(f"Parol (hammasi uchun): {PASSWORD}")
         for phone, name, role, _, _ in STAFF:
             self.stdout.write(f"  {phone}  {name}  ({Membership.Role(role).label})")
+
+    def _load_images(self) -> dict[str, bytes]:
+        """Artikul -> rasm baytlari. Avval keshdan, bo'lmasa internetdan. Yuklanmaganlari o'tkazib yuboriladi."""
+        IMAGE_CACHE.mkdir(parents=True, exist_ok=True)
+        result, failed = {}, []
+        for article, photo_id in IMAGES.items():
+            path = IMAGE_CACHE / f"{article}-{photo_id}.jpg"
+            if not path.exists():
+                try:
+                    req = urllib.request.Request(IMAGE_URL.format(id=photo_id), headers={"User-Agent": "Modiq seed_demo"})
+                    with urllib.request.urlopen(req, timeout=20) as res:
+                        data = res.read()
+                    if not data.startswith(b"\xff\xd8"):  # JPEG emas (masalan, xato sahifasi)
+                        raise ValueError("rasm emas")
+                    path.write_bytes(data)
+                except (urllib.error.URLError, TimeoutError, OSError, ValueError) as e:
+                    failed.append(f"{article} ({e})")
+                    continue
+            result[article] = path.read_bytes()
+        if failed:
+            self.stdout.write(self.style.WARNING(
+                "Ba'zi rasmlar yuklanmadi, tovarlar rasmsiz yaratiladi: " + ", ".join(failed)))
+        self.stdout.write(f"Tovar rasmlari: {len(result)} / {len(IMAGES)}")
+        return result
 
     @transaction.atomic
     def _delete(self, owner):
@@ -116,6 +166,10 @@ class Command(BaseCommand):
         Transfer.objects.filter(business=business).delete()
         Receipt.objects.filter(business=business).delete()
         Stock.objects.filter(business=business).delete()
+        # Rasm fayllari ham o'chiriladi (aks holda har --reset da media/ papkasi to'lib boradi).
+        storage = Product._meta.get_field("image").storage
+        images = [n for n in Product.objects.filter(business=business).values_list("image", flat=True) if n]
+        transaction.on_commit(lambda: [storage.delete(n) for n in images])
         Product.objects.filter(business=business).delete()
         business.delete()
         User.objects.filter(pk__in=[u.pk for u in users]).delete()
@@ -163,6 +217,8 @@ class Command(BaseCommand):
                 business=business, name=name, article=article, category=categories[cat], brand=brands[brand],
                 season=seasons[season], purchase_price=Decimal(buy), sale_price=Decimal(sell), min_stock=2,
             )
+            if article in self.images:
+                set_product_image(product, ContentFile(self.images[article], name=f"{article}.jpg"))
             variants = generate_variants(product, [colors[c] for c in c_names], [sizes[s] for s in s_names])
             for v in variants:
                 ReceiptLine.objects.create(receipt=receipt, variant=v, quantity=qty * 3, purchase_price=Decimal(buy))
