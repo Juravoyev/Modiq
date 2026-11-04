@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
 import { api, ApiError, qs } from "../api/client";
-import type { Page, PaymentType, Sale, Variant } from "../api/types";
+import type { Page, PaymentType, Quote, Sale, Variant } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
 import { Receipt } from "../components/Receipt";
 import { Empty, ErrorBox, Loading, ProductThumb } from "../components/ui";
@@ -30,6 +30,25 @@ export function PosPage() {
   const [belowCostConfirmed, setBelowCostConfirmed] = useState(false);
   const [done, setDone] = useState<Sale | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+
+  // Yakuniy narxni (aksiya, chegirma) backend hisoblaydi: savdo yakunlanganda ham aynan shu qoidalar ishlaydi.
+  const cartKey = JSON.stringify(cart.map((l) => [l.variant.id, l.quantity, l.discount || "0"]));
+  const quoteKey = useDebounced(cartKey, 300);
+  const [quote, setQuote] = useState<{ key: string; data: Quote | null; error: ApiError | null } | null>(null);
+
+  useEffect(() => {
+    if (!branch || quoteKey === "[]") { setQuote(null); return; }
+    let alive = true;
+    const lines = (JSON.parse(quoteKey) as [number, number, string][])
+      .map(([variant, quantity, discount_amount]) => ({ variant, quantity, discount_amount }));
+    api<Quote>("/sales/quote/", { method: "POST", body: { branch: branch.id, lines } })
+      .then((data) => alive && setQuote({ key: quoteKey, data, error: null }))
+      .catch((error: ApiError) => alive && setQuote({ key: quoteKey, data: null, error }));
+    return () => { alive = false; };
+  }, [quoteKey, branch]);
+
+  const fresh = quote && quote.key === cartKey ? quote : null;
+  const quoteLine = (id: number) => fresh?.data?.lines.find((l) => l.variant === id);
 
   const results = useAsync(
     () => search
@@ -83,8 +102,10 @@ export function PosPage() {
       subtotal += gross;
       discount += d;
     }
+    const q = fresh?.data;
+    if (q) return { subtotal: Number(q.subtotal), discount: Number(q.discount_total), total: Number(q.total), invalid };
     return { subtotal, discount, total: subtotal - discount, invalid };
-  }, [cart]);
+  }, [cart, fresh]);
 
   async function complete() {
     if (!branch || cart.length === 0) return;
@@ -182,6 +203,8 @@ export function PosPage() {
             {cart.map((l) => {
               const gross = Number(l.variant.effective_sale_price) * l.quantity;
               const bad = Number(l.discount || 0) > gross;
+              const ql = quoteLine(l.variant.id);
+              const lineTotal = ql ? Number(ql.line_total) : gross - Number(l.discount || 0);
               return (
                 <div key={l.variant.id} className="cart-line stack" style={{ gap: 6 }}>
                   <div className="spread">
@@ -199,9 +222,19 @@ export function PosPage() {
                       <button onClick={() => setQty(l.variant.id, l.quantity + 1)} aria-label="Ko'paytirish"
                               disabled={l.quantity >= (l.variant.stock ?? 0)}>+</button>
                     </div>
-                    <span className="num" style={{ fontWeight: 600 }}>{money(gross - Number(l.discount || 0))}</span>
+                    <span className="num" style={{ textAlign: "right" }}>
+                      {lineTotal !== gross && <s className="muted" style={{ display: "block" }}>{money(gross)}</s>}
+                      <b>{money(lineTotal)}</b>
+                    </span>
                   </div>
-                  <input className={`input ${bad ? "invalid" : ""}`} inputMode="decimal" placeholder="Chegirma (so'm)"
+                  {ql && Number(ql.auto_discount) > 0 && (
+                    <span className="badge badge-ok" style={{ alignSelf: "flex-start", whiteSpace: "normal" }}>
+                      🏷 {ql.discount_label}: −{money(ql.auto_discount)}
+                    </span>
+                  )}
+                  <input className={`input ${bad ? "invalid" : ""}`} inputMode="decimal" placeholder={!isManager && fresh?.data
+                           ? `Qo'shimcha chegirma (ko'pi bilan ${fresh.data.cashier_max_discount_percent}%)`
+                           : "Qo'shimcha chegirma (so'm)"}
                          value={l.discount} onChange={(e) => setDiscount(l.variant.id, e.target.value)}
                          aria-label="Chegirma summasi" />
                   {bad && <span className="field-error">Chegirma narxdan katta bo'lishi mumkin emas.</span>}
@@ -227,6 +260,7 @@ export function PosPage() {
         </div>
 
         {error && <ErrorBox message={error} />}
+        {!error && fresh?.error && <ErrorBox message={fresh.error.message} />}
         {needBelowCostConfirm && (
           <label className="alert alert-warn" style={{ cursor: "pointer" }}>
             <input type="checkbox" checked={belowCostConfirmed} onChange={(e) => setBelowCostConfirmed(e.target.checked)} />
@@ -235,8 +269,9 @@ export function PosPage() {
         )}
 
         <button className="btn btn-primary btn-lg" onClick={complete}
-                disabled={busy || cart.length === 0 || totals.invalid.length > 0 || (needBelowCostConfirm && !belowCostConfirmed)}>
-          {busy ? "Bajarilmoqda..." : `Savdoni yakunlash · ${money(totals.total)}`}
+                disabled={busy || cart.length === 0 || totals.invalid.length > 0 || !fresh?.data ||
+                          (needBelowCostConfirm && !belowCostConfirmed)}>
+          {busy ? "Bajarilmoqda..." : cart.length > 0 && !fresh ? "Hisoblanmoqda..." : `Savdoni yakunlash · ${money(totals.total)}`}
         </button>
       </aside>
     </div>

@@ -19,13 +19,38 @@ class SaleLineInputSerializer(serializers.Serializer):
     discount_amount = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=0, default=0)
 
 
-class SaleCreateSerializer(serializers.Serializer):
-    idempotency_key = serializers.UUIDField()
+class SaleQuoteSerializer(serializers.Serializer):
     branch = AllowedBranchPKField(queryset=Branch.objects.all())
-    payment_type = serializers.ChoiceField(choices=Sale.PaymentType.choices, default=Sale.PaymentType.CASH)
     lines = SaleLineInputSerializer(many=True, allow_empty=False)
+
+
+class SaleCreateSerializer(SaleQuoteSerializer):
+    idempotency_key = serializers.UUIDField()
+    payment_type = serializers.ChoiceField(choices=Sale.PaymentType.choices, default=Sale.PaymentType.CASH)
     allow_below_cost = serializers.BooleanField(default=False)
     note = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+
+
+def quote_to_dict(quote) -> dict:
+    """Kassa ekrani uchun hisob natijasi. Tannarx yuborilmaydi (sotuvchi ham ko'radi)."""
+    money = lambda d: f"{d:.2f}"  # noqa: E731
+    return {
+        "lines": [{
+            "variant": ln.variant.id, "sku": ln.variant.sku, "quantity": ln.quantity,
+            "unit_price": money(ln.unit_price), "gross": money(ln.gross),
+            "auto_discount": money(ln.auto_discount), "discount_source": ln.discount_source,
+            "discount_label": ln.discount_label, "promotion": ln.promotion.id if ln.promotion else None,
+            "manual_discount": money(ln.manual_discount), "line_total": money(ln.line_total),
+            "below_cost": ln.below_cost,
+        } for ln in quote.lines],
+        "subtotal": money(quote.subtotal),
+        "auto_discount_total": money(quote.auto_discount_total),
+        "manual_discount_total": money(quote.manual_discount_total),
+        "discount_total": money(quote.discount_total),
+        "total": money(quote.total),
+        "below_cost_skus": quote.below_cost_skus,
+        "cashier_max_discount_percent": quote.settings.cashier_max_discount_percent,
+    }
 
 
 class SaleLineSerializer(serializers.ModelSerializer):
@@ -36,8 +61,9 @@ class SaleLineSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SaleLine
-        fields = ["id", "variant", "sku", "variant_name", "quantity", "unit_price", "discount_amount", "line_total",
-                  "below_cost", "returned_quantity"]
+        fields = ["id", "variant", "sku", "variant_name", "quantity", "unit_price", "auto_discount",
+                  "discount_source", "discount_label", "promotion", "discount_amount", "line_total", "below_cost",
+                  "returned_quantity"]
 
     def get_returned_quantity(self, obj) -> int:
         # return_lines__sale_return oldindan yuklangan (prefetch), shuning uchun qo'shimcha so'rov yo'q.

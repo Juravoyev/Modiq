@@ -7,6 +7,7 @@ from django.test import TestCase, TransactionTestCase
 
 from apps.accounts.models import Membership
 from apps.common.testing import client_for, make_business, make_member, make_variant, put_stock, stock_of
+from apps.pricing.models import PricingSettings
 from apps.sales.models import Sale
 
 
@@ -54,6 +55,8 @@ class SaleTests(TestCase):
         self.assertEqual((stock_of(self.branch, self.variant), stock_of(self.branch, other)), (5, 1))
 
     def test_discount_calculation(self):
+        PricingSettings.objects.update_or_create(business=self.business,
+                                                 defaults={"cashier_max_discount_percent": 20})
         r = self.c.post("/api/sales/", sale_payload(self.branch, self.variant, qty=2, discount="30000"),
                         format="json")
         self.assertEqual(r.status_code, 201, r.data)

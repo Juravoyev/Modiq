@@ -12,6 +12,7 @@ import { PosPage } from "./pages/PosPage";
 import { ProductEditPage } from "./pages/ProductEditPage";
 import { ProductFormPage } from "./pages/ProductFormPage";
 import { ProductsPage } from "./pages/ProductsPage";
+import { PromotionsPage } from "./pages/PromotionsPage";
 import { ReceiptsPage } from "./pages/ReceiptsPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { ReturnsPage } from "./pages/ReturnsPage";
@@ -46,6 +47,7 @@ export default function App() {
             <Route path="products/:id/edit" element={<RequireManager><ProductEditPage /></RequireManager>} />
             <Route path="receipts" element={<RequireManager><ReceiptsPage /></RequireManager>} />
             <Route path="transfers" element={<RequireManager><TransfersPage /></RequireManager>} />
+            <Route path="promotions" element={<RequireManager><PromotionsPage /></RequireManager>} />
             <Route path="staff" element={<RequireManager><StaffPage /></RequireManager>} />
             <Route path="branches" element={<RequireManager><BranchesPage /></RequireManager>} />
             <Route path="more" element={<MorePage />} />

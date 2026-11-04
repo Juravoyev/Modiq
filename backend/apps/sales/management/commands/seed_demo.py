@@ -5,7 +5,7 @@ Ishlatish: python manage.py seed_demo [--reset]
 """
 import random
 import uuid
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
 from django.core.management.base import BaseCommand, CommandError
@@ -17,6 +17,7 @@ from apps.catalog.models import Brand, Category, Color, Product, Season, Size
 from apps.catalog.services import generate_variants
 from apps.inventory.models import Receipt, ReceiptLine, Stock, Transfer, TransferLine
 from apps.inventory.services import confirm_receipt, receive_transfer, send_transfer
+from apps.pricing.models import Promotion
 from apps.sales.models import Sale, SaleReturn
 from apps.sales.services import LineInput, ReturnLineInput, create_return, create_sale
 
@@ -62,6 +63,13 @@ PRODUCTS = [
     ("Jun sviter", "SV10", "Kurtka", "Comfort", "Kuz-Qish", 160000, 329000,
      ["Kulrang"], ["M", "L"], 5, False),
 ]
+
+
+def _season_end(season, today):
+    """Mavsumning bugundan keyingi eng yaqin oxirgi kuni."""
+    year = today.year + (1 if season.end_month < today.month else 0)
+    nxt = date(year + 1, 1, 1) if season.end_month == 12 else date(year, season.end_month + 1, 1)
+    return nxt - timedelta(days=1)
 
 
 def _at(day, hour, minute=0):
@@ -202,6 +210,15 @@ class Command(BaseCommand):
                                        document_number="US-77", document_date=today, created_by=manager.user)
         for v in self.sellable[-4:]:
             ReceiptLine.objects.create(receipt=draft, variant=v, quantity=5, purchase_price=v.effective_purchase_price)
+        # Aksiyalar savdolardan keyin yaratiladi: o'tgan kunlardagi savdolarga ta'sir qilmaydi.
+        winter = seasons["Kuz-Qish"]
+        Promotion.objects.create(business=business, name="Kuz-qish mavsumi", kind=Promotion.Kind.PERCENT,
+                                 value=Decimal(20), scope=Promotion.Scope.SEASON, season=winter, starts_on=today,
+                                 ends_on=_season_end(winter, today), created_by=manager.user)
+        new_year = date(today.year, 12, 25) if today < date(today.year, 12, 25) else date(today.year + 1, 12, 25)
+        Promotion.objects.create(business=business, name="Yangi yil", kind=Promotion.Kind.PERCENT, value=Decimal(15),
+                                 scope=Promotion.Scope.ALL, starts_on=new_year,
+                                 ends_on=date(new_year.year + 1, 1, 5), created_by=owner.user)
         self.stdout.write(f"{len(PRODUCTS)} ta tovar, {n_sales} ta savdo yaratildi.")
 
     def _random_sale(self, business, store, cashier, day):
@@ -212,8 +229,9 @@ class Command(BaseCommand):
         lines = []
         for v in self.rng.sample(candidates, k=min(len(candidates), self.rng.choice([1, 1, 1, 2, 2, 3]))):
             qty = min(stock[v.id], self.rng.choice([1, 1, 1, 2]))
-            # Ba'zan sotuvchi kichik chegirma beradi (yaxlitlash uchun).
-            discount = Decimal(self.rng.choice([0, 0, 0, 0, 5000, 10000])) if qty else Decimal(0)
+            # Ba'zan sotuvchi kichik chegirma beradi (yaxlitlash uchun), 10% chegarasidan oshmaydi.
+            limit = (v.effective_sale_price * qty / 10 // 1000) * 1000
+            discount = min(Decimal(self.rng.choice([0, 0, 0, 0, 5000, 10000])), limit) if qty else Decimal(0)
             lines.append(LineInput(v, qty, discount))
         sale, _ = create_sale(
             business=business, branch=store, user=cashier.user, membership=cashier, lines=lines,

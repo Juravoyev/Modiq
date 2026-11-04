@@ -13,13 +13,15 @@ from .serializers import (
     ReturnDecisionSerializer,
     SaleCreateSerializer,
     SaleManagerSerializer,
+    SaleQuoteSerializer,
     SaleReturnCreateSerializer,
     SaleReturnManagerSerializer,
     SaleReturnSerializer,
     SaleSerializer,
+    quote_to_dict,
 )
 from .reports import build_dashboard
-from .services import LineInput, ReturnLineInput, create_return, create_sale, decide_return
+from .services import LineInput, ReturnLineInput, create_return, create_sale, decide_return, quote_sale
 
 
 class SaleViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,
@@ -41,6 +43,8 @@ class SaleViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Creat
     def get_serializer_class(self):
         if self.action == "create":
             return SaleCreateSerializer
+        if self.action == "quote":
+            return SaleQuoteSerializer
         if getattr(self, "swagger_fake_view", False):
             return SaleManagerSerializer
         return SaleManagerSerializer if self.request.membership.is_manager else SaleSerializer
@@ -58,6 +62,17 @@ class SaleViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Creat
         out_cls = SaleManagerSerializer if request.membership.is_manager else SaleSerializer
         sale = self.get_queryset().get(pk=sale.pk)
         return Response(out_cls(sale, context={"request": request}).data, status=201 if created else 200)
+
+    @action(detail=False, methods=["post"])
+    def quote(self, request):
+        """Savatning yakuniy narxi (aksiya, chegirma). Hech narsa saqlanmaydi, qoldiq o'zgarmaydi."""
+        s = self.get_serializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        quote = quote_sale(
+            business=request.business, membership=request.membership,
+            lines=[LineInput(line["variant"], line["quantity"], line["discount_amount"]) for line in s.validated_data["lines"]],
+        )
+        return Response(quote_to_dict(quote))
 
 
 class SaleReturnViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,

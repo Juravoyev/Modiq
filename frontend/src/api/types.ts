@@ -80,6 +80,12 @@ export interface SaleLine {
   variant_name: string;
   quantity: number;
   unit_price: string;
+  /** Aksiya chegirmasi (qator bo'yicha jami). */
+  auto_discount: string;
+  discount_source: "" | "promotion";
+  discount_label: string;
+  promotion: number | null;
+  /** Qo'lda berilgan chegirma. */
   discount_amount: string;
   line_total: string;
   below_cost: boolean;
@@ -154,4 +160,62 @@ export interface SaleReturn {
   lines: { id: number; sale_line: number; sku: string; variant_name: string; quantity: number; refund_amount: string }[];
   // Faqat menejerga: hisobdan chiqarilgan tannarx (zarar).
   cost_total?: string;
+}
+
+export type PromotionKind = "percent" | "amount";
+export type PromotionScope = "all" | "category" | "season" | "products";
+export type PromotionStatus = "scheduled" | "active" | "ended" | "stopped";
+
+export interface Promotion {
+  id: number;
+  name: string;
+  kind: PromotionKind;
+  value: string;
+  scope: PromotionScope;
+  category: number | null;
+  category_name: string | null;
+  season: number | null;
+  season_name: string | null;
+  products: number[];
+  product_names: string[];
+  starts_on: string;
+  ends_on: string;
+  is_active: boolean;
+  status: PromotionStatus;
+  status_display: string;
+  label: string;
+  created_at: string;
+  created_by_name: string;
+  sales_count: number;
+  units_sold: number;
+  discount_given: string;
+}
+
+export interface PricingSettings { cashier_max_discount_percent: number }
+
+export interface QuoteLine {
+  variant: number;
+  sku: string;
+  quantity: number;
+  unit_price: string;
+  gross: string;
+  auto_discount: string;
+  discount_source: "" | "promotion";
+  discount_label: string;
+  promotion: number | null;
+  manual_discount: string;
+  line_total: string;
+  below_cost: boolean;
+}
+
+/** Kassadagi oldindan hisob: backend savdoni yakunlaganda ham aynan shu qoidalar bilan hisoblaydi. */
+export interface Quote {
+  lines: QuoteLine[];
+  subtotal: string;
+  auto_discount_total: string;
+  manual_discount_total: string;
+  discount_total: string;
+  total: string;
+  below_cost_skus: string[];
+  cashier_max_discount_percent: number;
 }

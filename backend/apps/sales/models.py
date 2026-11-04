@@ -46,6 +46,14 @@ class SaleLine(TimeStampedModel):
     variant = models.ForeignKey("catalog.ProductVariant", on_delete=models.PROTECT, related_name="sale_lines")
     quantity = models.PositiveIntegerField()
     unit_price = models.DecimalField(**MONEY)
+    # Avtomatik chegirma (aksiya), qator bo'yicha jami. Qaysi aksiya ekani savdo paytida yozib qo'yiladi:
+    # aksiya keyin o'zgartirilsa yoki to'xtatilsa ham chek o'zgarmaydi.
+    auto_discount = models.DecimalField(default=0, **MONEY)
+    discount_source = models.CharField(max_length=16, blank=True)
+    promotion = models.ForeignKey("pricing.Promotion", null=True, blank=True, on_delete=models.PROTECT,
+                                  related_name="sale_lines")
+    discount_label = models.CharField(max_length=200, blank=True)
+    # Sotuvchi yoki menejer qo'lda bergan chegirma.
     discount_amount = models.DecimalField(default=0, **MONEY)
     line_total = models.DecimalField(**MONEY)
     unit_cost = models.DecimalField(**MONEY)
@@ -56,6 +64,7 @@ class SaleLine(TimeStampedModel):
             models.CheckConstraint(condition=Q(quantity__gt=0), name="sale_line_quantity_positive"),
             models.CheckConstraint(condition=Q(discount_amount__gte=0, line_total__gte=0),
                                    name="sale_line_amounts_non_negative"),
+            models.CheckConstraint(condition=Q(auto_discount__gte=0), name="sale_line_auto_discount_non_negative"),
         ]
 
 

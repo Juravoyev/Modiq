@@ -16,9 +16,15 @@ export function Receipt({ sale, businessName }: { sale: Sale; businessName: stri
         <div key={l.id}>
           <div>{l.variant_name}</div>
           <div className="total-row num">
-            <span className="muted">{l.quantity} × {money(l.unit_price)}{Number(l.discount_amount) > 0 && ` − ${money(l.discount_amount)}`}</span>
+            <span className="muted">{l.quantity} × {money(l.unit_price)}</span>
             <span>{money(l.line_total)}</span>
           </div>
+          {Number(l.auto_discount) > 0 && (
+            <div className="total-row num"><span className="muted">{l.discount_label}</span><span>−{money(l.auto_discount)}</span></div>
+          )}
+          {Number(l.discount_amount) > 0 && (
+            <div className="total-row num"><span className="muted">Chegirma</span><span>−{money(l.discount_amount)}</span></div>
+          )}
         </div>
       ))}
       <div style={{ borderTop: "1px dashed var(--border)" }} />
