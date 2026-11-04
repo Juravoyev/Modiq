@@ -249,27 +249,42 @@ function PromotionForm({ promo, onSaved, onCancel }: { promo: Promotion | null; 
 
 function SettingsCard() {
   const settings = useAsync(() => api<PricingSettings>("/pricing/settings/"), []);
-  const [value, setValue] = useState<string | null>(null);
+  const [form, setForm] = useState<Record<string, string | boolean> | null>(null);
+  const [fields, setFields] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   if (!settings.data) return null;
-  const current = value ?? String(settings.data.cashier_max_discount_percent);
+  const s = settings.data;
+  const value = form ?? {
+    cashier_max_discount_percent: String(s.cashier_max_discount_percent), bonus_enabled: s.bonus_enabled,
+    bonus_percent: String(s.bonus_percent), bonus_max_share_percent: String(s.bonus_max_share_percent),
+  };
+  const set = (k: string, v: string | boolean) => { setForm({ ...value, [k]: v }); setMsg(null); };
+  const num = (k: string) => (e: { target: { value: string } }) => set(k, e.target.value.replace(/[^\d]/g, "").slice(0, 3));
 
   async function save(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     setMsg(null);
     setError(null);
+    setFields({});
     try {
       settings.setData(await api<PricingSettings>("/pricing/settings/", {
-        method: "PATCH", body: { cashier_max_discount_percent: Number(current || 0) },
+        method: "PATCH",
+        body: {
+          cashier_max_discount_percent: Number(value.cashier_max_discount_percent || 0),
+          bonus_enabled: value.bonus_enabled,
+          bonus_percent: Number(value.bonus_percent || 0),
+          bonus_max_share_percent: Number(value.bonus_max_share_percent || 0),
+        },
       }));
-      setValue(null);
+      setForm(null);
       setMsg("Saqlandi.");
     } catch (err) {
       setError((err as Error).message);
+      if (err instanceof ApiError) setFields(err.fields);
     } finally {
       setBusy(false);
     }
@@ -277,19 +292,30 @@ function SettingsCard() {
 
   return (
     <form className="card stack" onSubmit={save}>
-      <h2 style={{ margin: 0 }}>Chegirma sozlamalari</h2>
+      <h2 style={{ margin: 0 }}>Chegirma va bonus sozlamalari</h2>
       {msg && <Success>{msg}</Success>}
       {error && <ErrorBox message={error} />}
-      <div className="row" style={{ alignItems: "flex-end" }}>
-        <div style={{ flex: "1 1 260px" }}>
-          <Field label="Sotuvchi qo'lda beradigan chegirma chegarasi, %"
-                 hint="Undan katta chegirmani faqat egasi yoki menejer bera oladi. 0 — sotuvchi qo'lda chegirma bera olmaydi.">
-            <input className="input" inputMode="numeric" value={current}
-                   onChange={(e) => setValue(e.target.value.replace(/[^\d]/g, "").slice(0, 3))} />
-          </Field>
-        </div>
-        <button className="btn btn-primary" disabled={busy || value === null}>Saqlash</button>
+      <div className="grid-2">
+        <Field label="Sotuvchi qo'lda beradigan chegirma chegarasi, %" error={fields.cashier_max_discount_percent}
+               hint="Undan kattasini faqat egasi yoki menejer beradi. 0 — sotuvchi qo'lda chegirma bera olmaydi.">
+          <input className="input" inputMode="numeric" value={String(value.cashier_max_discount_percent)}
+                 onChange={num("cashier_max_discount_percent")} />
+        </Field>
+        <label className="row" style={{ gap: 8, alignSelf: "center" }}>
+          <input type="checkbox" checked={Boolean(value.bonus_enabled)} onChange={(e) => set("bonus_enabled", e.target.checked)} />
+          Bonus (keshbek) tizimi yoqilgan
+        </label>
+        <Field label="Har xariddan bonus, %" error={fields.bonus_percent}
+               hint="Mijoz pul bilan to'lagan summadan hisoblanadi, 24 soatdan keyin ishlatiladi. 1 ball = 1 so'm.">
+          <input className="input" inputMode="numeric" value={String(value.bonus_percent)} onChange={num("bonus_percent")}
+                 disabled={!value.bonus_enabled} />
+        </Field>
+        <Field label="Bonus bilan to'lash chegarasi, chekning %" error={fields.bonus_max_share_percent}>
+          <input className="input" inputMode="numeric" value={String(value.bonus_max_share_percent)}
+                 onChange={num("bonus_max_share_percent")} disabled={!value.bonus_enabled} />
+        </Field>
       </div>
+      <div><button className="btn btn-primary" disabled={busy || form === null}>Saqlash</button></div>
     </form>
   );
 }

@@ -58,6 +58,7 @@ class SaleViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Creat
             lines=[LineInput(line["variant"], line["quantity"], line["discount_amount"]) for line in data["lines"]],
             payment_type=data["payment_type"], idempotency_key=data["idempotency_key"],
             allow_below_cost=data["allow_below_cost"], note=data["note"], customer=data["customer"],
+            bonus_to_use=Decimal(data["bonus_to_use"]),
         )
         out_cls = SaleManagerSerializer if request.membership.is_manager else SaleSerializer
         sale = self.get_queryset().get(pk=sale.pk)
@@ -71,7 +72,7 @@ class SaleViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Creat
         quote = quote_sale(
             business=request.business, membership=request.membership,
             lines=[LineInput(line["variant"], line["quantity"], line["discount_amount"]) for line in s.validated_data["lines"]],
-            customer=s.validated_data["customer"],
+            customer=s.validated_data["customer"], bonus_to_use=Decimal(s.validated_data["bonus_to_use"]),
         )
         return Response(quote_to_dict(quote))
 

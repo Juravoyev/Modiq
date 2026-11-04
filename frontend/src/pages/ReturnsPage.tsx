@@ -13,6 +13,11 @@ const STATUS: Record<ReturnStatus, { cls: string; icon: string }> = {
   rejected: { cls: "badge-danger", icon: "✕" },
 };
 
+/** Bonus bilan to'langan qism pul emas, mijoz balansiga qaytadi. */
+export function bonusNote(r: SaleReturn) {
+  return Number(r.bonus_refund) > 0 ? ` Bonus bilan to'langan ${money(r.bonus_refund)} mijoz balansiga qaytdi.` : "";
+}
+
 export function ReturnBadge({ r }: { r: Pick<SaleReturn, "status" | "status_display"> }) {
   return <span className={`badge ${STATUS[r.status].cls}`}>{STATUS[r.status].icon} {r.status_display}</span>;
 }
@@ -109,7 +114,7 @@ export function ReturnsPage() {
     setMessage(null);
     try {
       await api(`/sales/returns/${r.id}/${approve ? "approve" : "reject"}/`, { method: "POST", body: { note } });
-      setMessage(approve ? `Tasdiqlandi. Mijozga ${money(r.refund_total)} qaytaring.` : "Qaytarish rad etildi.");
+      setMessage(approve ? `Tasdiqlandi. Mijozga ${money(r.refund_total)} qaytaring.${bonusNote(r)}` : "Qaytarish rad etildi.");
       list.reload();
     } catch (e) {
       setActionError((e as Error).message);

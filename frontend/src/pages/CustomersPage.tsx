@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from "react";
 
 import { api, ApiError, qs } from "../api/client";
-import type { Customer, CustomerGroup, Page } from "../api/types";
+import type { BonusTransaction, Customer, CustomerGroup, Page } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
 import { Empty, ErrorBox, Field, Loading, Pagination, Success } from "../components/ui";
-import { money } from "../utils/format";
+import { dateTime, money } from "../utils/format";
 import { useAsync, useDebounced } from "../utils/useAsync";
 
 export function GroupBadge({ name, percent }: { name: string | null; percent: number }) {
@@ -159,12 +159,52 @@ function GroupsCard({ groups, onChanged }: { groups: CustomerGroup[]; onChanged:
   );
 }
 
+function BonusHistory({ customer, onClose }: { customer: Customer; onClose: () => void }) {
+  const rows = useAsync(() => api<BonusTransaction[]>(`/customers/${customer.id}/bonus/`), [customer.id]);
+  const now = new Date();
+  return (
+    <div className="card stack">
+      <div className="spread">
+        <h2 style={{ margin: 0 }}>Bonus tarixi: {customer.full_name || customer.phone}</h2>
+        <button className="btn btn-secondary btn-sm" onClick={onClose}>Yopish</button>
+      </div>
+      <div className="row">
+        <span>Ishlatish mumkin: <b className="num">{money(customer.bonus_available)}</b></span>
+        {Number(customer.bonus_pending) > 0 && <span className="muted">Kutilmoqda: {money(customer.bonus_pending)}</span>}
+      </div>
+      {rows.loading ? <Loading /> : rows.error || !rows.data ? <ErrorBox message={rows.error ?? "Xatolik"} onRetry={rows.reload} /> :
+        rows.data.length === 0 ? <p className="muted">Hali bonus harakati yo'q.</p> : (
+          <div className="table-wrap">
+            <table className="table">
+              <thead><tr><th>Sana</th><th>Harakat</th><th className="right">Summa</th></tr></thead>
+              <tbody>
+                {rows.data.map((t) => (
+                  <tr key={t.id}>
+                    <td className="num">{dateTime(t.created_at)}</td>
+                    <td>
+                      {t.kind_display}{t.sale && <span className="muted"> · chek № {t.sale}</span>}
+                      {new Date(t.available_at) > now && <div className="muted">{dateTime(t.available_at)} dan ishlatiladi</div>}
+                    </td>
+                    <td className="right num" style={{ color: Number(t.amount) < 0 ? "var(--danger)" : "var(--green)" }}>
+                      {Number(t.amount) > 0 ? "+" : ""}{money(t.amount)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+    </div>
+  );
+}
+
 export function CustomersPage() {
   const { isManager } = useAuth();
   const [query, setQuery] = useState("");
   const search = useDebounced(query.trim(), 300);
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<Customer | "new" | null>(null);
+  const [history, setHistory] = useState<Customer | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const groups = useAsync(() => api<CustomerGroup[]>("/customers/groups/"), []);
   const list = useAsync(() => api<Page<Customer>>(`/customers/${qs({ search, page })}`), [search, page]);
@@ -181,6 +221,7 @@ export function CustomersPage() {
                       groups={groups.data ?? []} onCancel={() => setEditing(null)}
                       onSaved={() => { setEditing(null); setMessage("Mijoz saqlandi."); list.reload(); groups.reload(); }} />
       )}
+      {history && <BonusHistory key={history.id} customer={history} onClose={() => setHistory(null)} />}
       <input className="input" type="search" placeholder="Ism yoki telefon raqami" value={query}
              onChange={(e) => { setQuery(e.target.value); setPage(1); }} aria-label="Mijoz qidirish" />
 
@@ -192,7 +233,7 @@ export function CustomersPage() {
         <div className="card" style={{ padding: 0 }}>
           <div className="table-wrap">
             <table className="table">
-              <thead><tr><th>Mijoz</th><th>Toifa</th><th className="right">Xaridlar</th><th /></tr></thead>
+              <thead><tr><th>Mijoz</th><th>Toifa</th><th className="right">Xaridlar</th><th className="right">Bonus</th><th /></tr></thead>
               <tbody>
                 {list.data.results.map((c) => (
                   <tr key={c.id}>
@@ -201,6 +242,12 @@ export function CustomersPage() {
                     <td className="right num">
                       <div>{money(c.total_spent)}</div>
                       <div className="muted">{c.purchases_count} ta xarid</div>
+                    </td>
+                    <td className="right num">
+                      <button className="btn btn-secondary btn-sm" onClick={() => setHistory(c)} title="Bonus tarixi">
+                        🎁 {money(c.bonus_available)}
+                      </button>
+                      {Number(c.bonus_pending) > 0 && <div className="muted">+{money(c.bonus_pending)} kutilmoqda</div>}
                     </td>
                     <td><button className="btn btn-secondary btn-sm" onClick={() => { setEditing(c); setMessage(null); }}>✎</button></td>
                   </tr>

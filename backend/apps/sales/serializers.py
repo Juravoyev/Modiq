@@ -25,6 +25,8 @@ class SaleQuoteSerializer(serializers.Serializer):
     lines = SaleLineInputSerializer(many=True, allow_empty=False)
     customer = BusinessScopedPKField(queryset=Customer.objects.select_related("group"), allow_null=True,
                                      required=False, default=None)
+    bonus_to_use = serializers.IntegerField(min_value=0, required=False, default=0,
+                                            help_text="Bonus bilan to'lanadigan summa (butun so'm)")
 
 
 class SaleCreateSerializer(SaleQuoteSerializer):
@@ -52,7 +54,8 @@ def quote_to_dict(quote) -> dict:
             "unit_price": money(ln.unit_price), "gross": money(ln.gross),
             "auto_discount": money(ln.auto_discount), "discount_source": ln.discount_source,
             "discount_label": ln.discount_label, "promotion": ln.promotion.id if ln.promotion else None,
-            "manual_discount": money(ln.manual_discount), "line_total": money(ln.line_total),
+            "manual_discount": money(ln.manual_discount), "bonus_amount": money(ln.bonus_amount),
+            "line_total": money(ln.line_total),
             "below_cost": ln.below_cost,
         } for ln in quote.lines],
         "subtotal": money(quote.subtotal),
@@ -62,6 +65,16 @@ def quote_to_dict(quote) -> dict:
         "total": money(quote.total),
         "below_cost_skus": quote.below_cost_skus,
         "cashier_max_discount_percent": quote.settings.cashier_max_discount_percent,
+        "bonus": {
+            "enabled": quote.settings.bonus_enabled and quote.customer is not None,
+            "percent": quote.settings.bonus_percent,
+            "max_share_percent": quote.settings.bonus_max_share_percent,
+            "available": money(quote.bonus_available),
+            "pending": money(quote.bonus_pending),
+            "max": money(quote.bonus_max),
+            "used": money(quote.bonus_used),
+            "earned": money(quote.bonus_earned),
+        },
     }
 
 
@@ -74,7 +87,7 @@ class SaleLineSerializer(serializers.ModelSerializer):
     class Meta:
         model = SaleLine
         fields = ["id", "variant", "sku", "variant_name", "quantity", "unit_price", "auto_discount",
-                  "discount_source", "discount_label", "promotion", "discount_amount", "line_total", "below_cost",
+                  "discount_source", "discount_label", "promotion", "discount_amount", "bonus_amount", "line_total", "below_cost",
                   "returned_quantity"]
 
     def get_returned_quantity(self, obj) -> int:
@@ -94,7 +107,7 @@ class SaleSerializer(serializers.ModelSerializer):
         model = Sale
         fields = ["id", "created_at", "branch", "branch_name", "cashier", "cashier_name", "payment_type",
                   "payment_type_display", "subtotal", "discount_total", "total", "note", "lines", "idempotency_key",
-                  "return_deadline", "customer", "customer_info"]
+                  "return_deadline", "customer", "customer_info", "bonus_spent", "bonus_earned"]
 
     def get_cashier_name(self, obj) -> str:
         return _user_name(obj.cashier)
@@ -139,7 +152,7 @@ class SaleReturnLineSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SaleReturnLine
-        fields = ["id", "sale_line", "sku", "variant_name", "quantity", "refund_amount"]
+        fields = ["id", "sale_line", "sku", "variant_name", "quantity", "refund_amount", "bonus_refund"]
 
 
 class SaleReturnSerializer(serializers.ModelSerializer):
@@ -152,7 +165,7 @@ class SaleReturnSerializer(serializers.ModelSerializer):
     class Meta:
         model = SaleReturn
         fields = ["id", "created_at", "sale", "branch", "branch_name", "status", "status_display", "reason",
-                  "refund_total", "requested_by", "requested_by_name", "decided_by", "decided_by_name", "decided_at",
+                  "refund_total", "bonus_refund", "bonus_revoked", "requested_by", "requested_by_name", "decided_by", "decided_by_name", "decided_at",
                   "decision_note", "lines"]
 
     def get_requested_by_name(self, obj) -> str:

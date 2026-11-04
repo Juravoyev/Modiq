@@ -87,6 +87,8 @@ export interface SaleLine {
   promotion: number | null;
   /** Qo'lda berilgan chegirma. */
   discount_amount: string;
+  /** Shu qatorga to'g'ri kelgan bonus to'lovi; line_total — pul bilan to'langan qism. */
+  bonus_amount: string;
   line_total: string;
   below_cost: boolean;
   /** Qaytarilgan yoki qaytarish tasdig'ini kutayotgan miqdor. */
@@ -110,6 +112,8 @@ export interface Sale {
   return_deadline: string;
   customer: number | null;
   customer_info: CustomerBrief | null;
+  bonus_spent: string;
+  bonus_earned: string;
   cost_total?: string;
   gross_profit?: string;
 }
@@ -155,6 +159,8 @@ export interface SaleReturn {
   status_display: string;
   reason: string;
   refund_total: string;
+  bonus_refund: string;
+  bonus_revoked: string;
   requested_by_name: string;
   decided_by_name: string;
   decided_at: string | null;
@@ -193,7 +199,12 @@ export interface Promotion {
   discount_given: string;
 }
 
-export interface PricingSettings { cashier_max_discount_percent: number }
+export interface PricingSettings {
+  cashier_max_discount_percent: number;
+  bonus_enabled: boolean;
+  bonus_percent: number;
+  bonus_max_share_percent: number;
+}
 
 export interface QuoteLine {
   variant: number;
@@ -206,6 +217,7 @@ export interface QuoteLine {
   discount_label: string;
   promotion: number | null;
   manual_discount: string;
+  bonus_amount: string;
   line_total: string;
   below_cost: boolean;
 }
@@ -221,6 +233,20 @@ export interface Quote {
   total: string;
   below_cost_skus: string[];
   cashier_max_discount_percent: number;
+  bonus: {
+    enabled: boolean;
+    percent: number;
+    max_share_percent: number;
+    /** Hozir ishlatish mumkin. */
+    available: string;
+    /** 24 soatdan keyin ishlatiladi. */
+    pending: string;
+    /** Shu chekda ko'pi bilan. */
+    max: string;
+    used: string;
+    /** Shu xariddan yig'iladi. */
+    earned: string;
+  };
 }
 
 export type DiscountSource = "" | "promotion" | "privilege";
@@ -246,4 +272,17 @@ export interface Customer {
   created_at: string;
   purchases_count: number;
   total_spent: string;
+  bonus_available: string;
+  bonus_pending: string;
+}
+
+export interface BonusTransaction {
+  id: number;
+  created_at: string;
+  kind: "earn" | "spend" | "refund" | "revoke";
+  kind_display: string;
+  amount: string;
+  sale: number | null;
+  sale_return: number | null;
+  available_at: string;
 }

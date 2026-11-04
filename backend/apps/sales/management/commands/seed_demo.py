@@ -17,7 +17,8 @@ from apps.catalog.models import Brand, Category, Color, Product, Season, Size
 from apps.catalog.services import generate_variants
 from apps.inventory.models import Receipt, ReceiptLine, Stock, Transfer, TransferLine
 from apps.inventory.services import confirm_receipt, receive_transfer, send_transfer
-from apps.customers.models import Customer, CustomerGroup
+from apps.customers.bonus import BONUS_HOLD
+from apps.customers.models import BonusTransaction, Customer, CustomerGroup
 from apps.pricing.models import Promotion
 from apps.sales.models import Sale, SaleReturn
 from apps.sales.services import LineInput, ReturnLineInput, create_return, create_sale
@@ -114,6 +115,7 @@ class Command(BaseCommand):
         business = owner.membership.business
         users = list(User.objects.filter(membership__business=business))
         # PROTECT bog'lanishlar sababli hujjatlar avval o'chiriladi.
+        BonusTransaction.objects.filter(business=business).delete()
         SaleReturn.objects.filter(business=business).delete()
         Sale.objects.filter(business=business).delete()
         Promotion.objects.filter(business=business).delete()
@@ -202,7 +204,11 @@ class Command(BaseCommand):
                     sale = self._random_sale(business, store, cashiers[store], day)
                     if sale and day < today:
                         hour, minute = self.rng.randint(10, 20), self.rng.randint(0, 59)
-                        Sale.objects.filter(pk=sale.pk).update(created_at=_at(day, hour, minute))
+                        when = _at(day, hour, minute)
+                        Sale.objects.filter(pk=sale.pk).update(created_at=when)
+                        # Bonus ham savdo vaqtiga ko'chadi: o'tgan kunlardagi bonus allaqachon ishlatish mumkin.
+                        BonusTransaction.objects.filter(sale=sale).update(created_at=when,
+                                                                          available_at=when + BONUS_HOLD)
                     n_sales += bool(sale)
 
         # Qaytarishlar bugungi savdolar ustida (24 soatlik muddat ichida):

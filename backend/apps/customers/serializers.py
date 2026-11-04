@@ -4,7 +4,7 @@ from rest_framework import serializers
 from apps.common.fields import BusinessScopedPKField
 from apps.common.utils import normalize_phone
 
-from .models import Customer, CustomerGroup
+from .models import BonusTransaction, Customer, CustomerGroup
 
 
 class CustomerGroupSerializer(serializers.ModelSerializer):
@@ -35,11 +35,15 @@ class CustomerSerializer(serializers.ModelSerializer):
     discount_percent = serializers.IntegerField(read_only=True)
     purchases_count = serializers.IntegerField(read_only=True, default=0)
     total_spent = serializers.DecimalField(max_digits=16, decimal_places=2, read_only=True, default=0)
+    bonus_available = serializers.DecimalField(max_digits=16, decimal_places=2, read_only=True, default=0,
+                                               help_text="Hozir ishlatish mumkin bo'lgan bonus")
+    bonus_pending = serializers.DecimalField(max_digits=16, decimal_places=2, read_only=True, default=0,
+                                             help_text="24 soatdan keyin ishlatiladigan bonus")
 
     class Meta:
         model = Customer
         fields = ["id", "phone", "full_name", "group", "group_name", "discount_percent", "note", "created_at",
-                  "purchases_count", "total_spent"]
+                  "purchases_count", "total_spent", "bonus_available", "bonus_pending"]
 
     def validate_phone(self, value):
         try:
@@ -60,3 +64,11 @@ class CustomerSerializer(serializers.ModelSerializer):
         if group != current and not membership.is_manager:
             raise serializers.ValidationError("Imtiyoz toifasini faqat egasi yoki menejer belgilaydi.")
         return group
+
+
+class BonusTransactionSerializer(serializers.ModelSerializer):
+    kind_display = serializers.CharField(source="get_kind_display", read_only=True)
+
+    class Meta:
+        model = BonusTransaction
+        fields = ["id", "created_at", "kind", "kind_display", "amount", "sale", "sale_return", "available_at"]

@@ -1,15 +1,28 @@
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db.models import Count, DecimalField, Q, Sum, Value
+from django.db.models import Count, DecimalField, OuterRef, Q, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
+from django.utils import timezone
 from rest_framework import permissions
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from rest_framework.permissions import BasePermission
 
 from apps.common.permissions import IsBusinessMember, IsManagerOrReadOnly
 from apps.common.utils import normalize_phone
 from apps.common.views import BusinessScopedViewSet
 
-from .models import Customer, CustomerGroup
-from .serializers import CustomerGroupSerializer, CustomerSerializer
+from .models import BonusTransaction, Customer, CustomerGroup
+from .serializers import BonusTransactionSerializer, CustomerGroupSerializer, CustomerSerializer
+
+
+MONEY = DecimalField(max_digits=16, decimal_places=2)
+
+
+def _bonus_sum(condition):
+    # Subquery: sotuvlar bilan join qilinganda bonus yig'indisi takrorlanib ketmasligi uchun.
+    qs = (BonusTransaction.objects.filter(condition, customer=OuterRef("pk")).order_by().values("customer")
+          .annotate(s=Sum("amount")).values("s"))
+    return Coalesce(Subquery(qs, output_field=MONEY), Value(0, output_field=MONEY))
 
 
 class CanDeleteCustomer(BasePermission):
@@ -45,10 +58,13 @@ class CustomerViewSet(BusinessScopedViewSet):
     ordering_fields = ["created_at", "full_name", "total_spent"]
 
     def get_queryset(self):
+        now = timezone.now()
         qs = super().get_queryset().select_related("group").annotate(
             purchases_count=Count("sales", distinct=True),
-            total_spent=Coalesce(Sum("sales__total"), Value(0, output_field=DecimalField(max_digits=16, decimal_places=2))),
-        )
+            total_spent=Coalesce(Sum("sales__total"), Value(0, output_field=MONEY)),
+            bonus_available=_bonus_sum(Q(available_at__lte=now)),
+            bonus_pending=_bonus_sum(Q(available_at__gt=now)),
+        ).order_by("-created_at", "-id")
         phone = self.request.query_params.get("phone")
         if phone:
             try:
@@ -56,3 +72,10 @@ class CustomerViewSet(BusinessScopedViewSet):
             except DjangoValidationError:
                 qs = qs.none()
         return qs
+
+    @action(detail=True, methods=["get"])
+    def bonus(self, request, pk=None):
+        """Mijozning bonus tarixi (oxirgi 100 ta harakat)."""
+        customer = self.get_object()
+        rows = customer.bonus_transactions.all()[:100]
+        return Response(BonusTransactionSerializer(rows, many=True).data)

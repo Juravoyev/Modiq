@@ -10,7 +10,7 @@ from .models import PricingSettings, Promotion
 class PricingSettingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = PricingSettings
-        fields = ["cashier_max_discount_percent"]
+        fields = ["cashier_max_discount_percent", "bonus_enabled", "bonus_percent", "bonus_max_share_percent"]
 
 
 class PromotionSerializer(serializers.ModelSerializer):

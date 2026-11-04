@@ -7,7 +7,7 @@ import { Receipt } from "../components/Receipt";
 import { Empty, ErrorBox, Loading, Pagination, Success } from "../components/ui";
 import { dateTime, money } from "../utils/format";
 import { useAsync } from "../utils/useAsync";
-import { ReturnForm } from "./ReturnsPage";
+import { bonusNote, ReturnForm } from "./ReturnsPage";
 
 export function SalesPage() {
   const { branch, me, isManager } = useAuth();
@@ -34,7 +34,7 @@ export function SalesPage() {
           <ReturnForm sale={selected} onCancel={() => setReturning(false)} onDone={async (r) => {
             setReturning(false);
             setNotice(r.status === "approved"
-              ? `Qaytarish tasdiqlandi. Mijozga ${money(r.refund_total)} qaytaring.`
+              ? `Qaytarish tasdiqlandi. Mijozga ${money(r.refund_total)} qaytaring.${bonusNote(r)}`
               : "So'rov yuborildi. Mas'ul xodim tasdiqlagach, mijozga pulni qaytaring (\"Qaytarish\" bo'limi).");
             setSelected(await api<Sale>(`/sales/${selected.id}/`));
           }} />

@@ -21,11 +21,19 @@ class PricingSettings(TimeStampedModel):
     # Undan kattasini faqat egasi yoki menejer bera oladi.
     cashier_max_discount_percent = models.PositiveSmallIntegerField(
         "Sotuvchining qo'lda chegirma chegarasi, %", default=10, validators=[MaxValueValidator(100)])
+    # Bonus (keshbek): mijoz pul bilan to'lagan summaning foizi bonus bo'lib yig'iladi, 1 ball = 1 so'm.
+    bonus_enabled = models.BooleanField("Bonus tizimi yoqilgan", default=True)
+    bonus_percent = models.PositiveSmallIntegerField("Bonus, %", default=3, validators=[MaxValueValidator(20)])
+    # Chekning ko'pi bilan shuncha foizini bonus bilan to'lash mumkin.
+    bonus_max_share_percent = models.PositiveSmallIntegerField(
+        "Bonus bilan to'lash chegarasi, %", default=35, validators=[MaxValueValidator(100)])
 
     class Meta:
         constraints = [
             models.CheckConstraint(condition=Q(cashier_max_discount_percent__lte=100),
                                    name="pricing_cashier_discount_percent_valid"),
+            models.CheckConstraint(condition=Q(bonus_percent__lte=20, bonus_max_share_percent__lte=100),
+                                   name="pricing_bonus_settings_valid"),
         ]
 
     @classmethod

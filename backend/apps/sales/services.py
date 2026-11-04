@@ -9,6 +9,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from apps.inventory.models import StockMovement
 from apps.inventory.services import change_stock
+from apps.customers.bonus import lock_customer, record_return, record_sale, round_soum
 from apps.pricing.services import CartLine, price_cart
 
 from .models import Sale, SaleLine, SaleReturn, SaleReturnLine
@@ -21,14 +22,14 @@ LineInput = CartLine
 
 
 def create_sale(*, business, branch, user, membership, lines, payment_type, idempotency_key,
-                allow_below_cost=False, note="", customer=None):
+                allow_below_cost=False, note="", customer=None, bonus_to_use=ZERO):
     """Savdoni yakunlaydi. (sale, created) qaytaradi. created=False — bu takroriy so'rov edi."""
     existing = Sale.objects.filter(business=business, idempotency_key=idempotency_key).first()
     if existing is not None:
         return existing, False
     try:
         return _create_sale(business, branch, user, membership, lines, payment_type, idempotency_key,
-                            allow_below_cost, note, customer), True
+                            allow_below_cost, note, customer, bonus_to_use), True
     except IntegrityError:
         # Xuddi shu kalit bilan parallel so'rov bizdan oldin yakunlandi.
         existing = Sale.objects.filter(business=business, idempotency_key=idempotency_key).first()
@@ -37,15 +38,20 @@ def create_sale(*, business, branch, user, membership, lines, payment_type, idem
         return existing, False
 
 
-def quote_sale(*, business, membership, lines, customer=None):
+def quote_sale(*, business, membership, lines, customer=None, bonus_to_use=ZERO):
     """Savdoni yakunlamasdan narxini hisoblaydi (kassa ekrani uchun). Hech narsa yozilmaydi."""
-    return price_cart(business=business, membership=membership, lines=lines, customer=customer)
+    return price_cart(business=business, membership=membership, lines=lines, customer=customer,
+                      bonus_to_use=bonus_to_use)
 
 
 @transaction.atomic
 def _create_sale(business, branch, user, membership, lines, payment_type, idempotency_key, allow_below_cost, note,
-                 customer):
-    quote = price_cart(business=business, membership=membership, lines=lines, customer=customer)
+                 customer, bonus_to_use):
+    if customer is not None:
+        # Bonus balansi tekshiruvidan oldin mijoz qulflanadi (ikki kassada bir vaqtda ishlatish poygasi).
+        customer = lock_customer(customer)
+    quote = price_cart(business=business, membership=membership, lines=lines, customer=customer,
+                       bonus_to_use=bonus_to_use)
     if quote.below_cost_skus:
         below = ", ".join(quote.below_cost_skus)
         if not membership.is_manager:
@@ -59,8 +65,8 @@ def _create_sale(business, branch, user, membership, lines, payment_type, idempo
     # Savdo qatori birinchi yaratiladi: bir xil idempotency_key bilan parallel so'rov shu yerda kutib turadi.
     sale = Sale.objects.create(
         business=business, branch=branch, cashier=user, customer=customer, idempotency_key=idempotency_key,
-        payment_type=payment_type, subtotal=quote.subtotal, discount_total=quote.discount_total, total=quote.total, cost_total=quote.cost_total,
-        note=note,
+        payment_type=payment_type, subtotal=quote.subtotal, discount_total=quote.discount_total, total=quote.total,
+        cost_total=quote.cost_total, bonus_spent=quote.bonus_used, bonus_earned=quote.bonus_earned, note=note,
     )
     # Qoldiq qatorlari variant id tartibida qulflanadi (deadlock bo'lmasligi uchun).
     for pl in sorted(quote.lines, key=lambda ln: ln.variant.id):
@@ -69,9 +75,11 @@ def _create_sale(business, branch, user, membership, lines, payment_type, idempo
         SaleLine.objects.create(
             sale=sale, variant=pl.variant, quantity=pl.quantity, unit_price=pl.unit_price, unit_cost=pl.unit_cost,
             auto_discount=pl.auto_discount, discount_source=pl.discount_source, promotion=pl.promotion,
-            discount_label=pl.discount_label, discount_amount=pl.manual_discount, line_total=pl.line_total,
-            below_cost=pl.below_cost,
+            discount_label=pl.discount_label, discount_amount=pl.manual_discount, bonus_amount=pl.bonus_amount,
+            line_total=pl.line_total, below_cost=pl.below_cost,
         )
+    if customer is not None:
+        record_sale(sale, user=user)
     return sale
 
 
@@ -124,20 +132,28 @@ def create_return(*, sale, user, membership, lines, reason) -> SaleReturn:
                                    "code": "return_quantity_exceeded"})
         # Mijozga chegirma bilan to'lagan narxi qaytariladi (qator summasining ulushi).
         refund = (sl.line_total * line.quantity / sl.quantity).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        rows.append((sl, line.quantity, refund))
+        # Bonus bilan to'langan qism ham shu ulushda (yig'ilib borish usulida: bir necha qaytarishda jami oshib ketmaydi).
+        done = already.get(sl.id, 0)
+        bonus = (round_soum(sl.bonus_amount * (done + line.quantity) / sl.quantity)
+                 - round_soum(sl.bonus_amount * done / sl.quantity))
+        rows.append((sl, line.quantity, refund, bonus))
 
     approved = membership.may_approve_returns
     sale_return = SaleReturn.objects.create(
         business=sale.business, sale=sale, branch=sale.branch, reason=reason.strip(), requested_by=user,
         status=SaleReturn.Status.APPROVED if approved else SaleReturn.Status.PENDING,
         decided_by=user if approved else None, decided_at=timezone.now() if approved else None,
-        refund_total=sum((r for _, _, r in rows), ZERO),
-        cost_total=sum((sl.unit_cost * q for sl, q, _ in rows), ZERO),
+        refund_total=sum((r for _, _, r, _ in rows), ZERO),
+        cost_total=sum((sl.unit_cost * q for sl, q, _, _ in rows), ZERO),
+        bonus_refund=sum((b for _, _, _, b in rows), ZERO),
     )
     SaleReturnLine.objects.bulk_create([
-        SaleReturnLine(sale_return=sale_return, sale_line=sl, quantity=q, refund_amount=r, unit_cost=sl.unit_cost)
-        for sl, q, r in rows
+        SaleReturnLine(sale_return=sale_return, sale_line=sl, quantity=q, refund_amount=r, bonus_refund=b,
+                       unit_cost=sl.unit_cost)
+        for sl, q, r, b in rows
     ])
+    if approved:
+        record_return(sale_return, user=user)
     return sale_return
 
 
@@ -153,4 +169,6 @@ def decide_return(return_id: int, *, user, membership, approve: bool, note="") -
     sale_return.decided_at = timezone.now()
     sale_return.decision_note = note
     sale_return.save(update_fields=["status", "decided_by", "decided_at", "decision_note", "updated_at"])
+    if approve:
+        record_return(sale_return, user=user)
     return sale_return

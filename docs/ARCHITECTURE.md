@@ -16,7 +16,7 @@ Backend modullari (`backend/apps/`):
 | `catalog` | Kategoriya, brend, mavsum, rang, o'lcham, Product (model), ProductVariant (rang×o'lcham = SKU) |
 | `inventory` | Stock (filial×variant qoldig'i), StockMovement (jurnal), Receipt (kirim), Transfer (ko'chirish) |
 | `sales` | Sale, SaleLine (kassa) |
-| `customers` | Customer (telefon bilan), CustomerGroup (imtiyoz toifasi: doimiy chegirma foizi) |
+| `customers` | Customer (telefon bilan), CustomerGroup (imtiyoz toifasi: doimiy chegirma foizi), BonusTransaction (bonus jurnali) |
 | `pricing` | Promotion (muddatli aksiya: barcha tovar, kategoriya, mavsum yoki tanlangan tovarlar), PricingSettings, narx hisoblash (`services.price_cart`) |
 
 Keyingi bosqichlarda: `insights` (sotilmay qolish xavfi), `reports`.
@@ -26,7 +26,8 @@ Keyingi bosqichlarda: `insights` (sotilmay qolish xavfi), `reports`.
 2. Mijoz imtiyozi (toifa foizi) ham aksiya bilan qo'shilmaydi: har bir qatorda ikkisidan foydalirog'i olinadi.
 3. Avtomatik chegirma narxni tannarxdan pastga tushirmaydi.
 4. Sotuvchining qo'lda beradigan chegirmasi `cashier_max_discount_percent` bilan cheklangan (standart 10%). Egasi va menejerda chegara yo'q, lekin tannarxdan past sotish uchun alohida tasdiq kerak.
-5. Qo'llangan aksiya yoki imtiyoz, uning nomi va summasi `SaleLine` ga yozib qo'yiladi: aksiya keyin o'zgarsa ham eski chek o'zgarmaydi. Savdoda ishlatilgan aksiyani o'chirib bo'lmaydi, faqat to'xtatiladi.
+5. Bonus (keshbek): mijoz pul bilan to'lagan summaning `bonus_percent` foizi (standart 3%) yig'iladi, 1 ball = 1 so'm. Chekning ko'pi bilan `bonus_max_share_percent` foizi (standart 35%) bonus bilan to'lanadi, bonus ham tannarxdan pastga tushirmaydi va qatorlarga bo'sh joyi ulushida taqsimlanadi (`SaleLine.bonus_amount`). Balans saqlanmaydi, `BonusTransaction` jurnalidan hisoblanadi. Yangi bonus 24 soatdan (qaytarish muddati) keyin ishlatiladi, shu sababli qaytarishda bekor qilinadigan bonus hali sarflanmagan bo'ladi. Savdoda mijoz qatori qulflanadi: bitta bonusni ikki kassada ikki marta ishlatib bo'lmaydi. Tasdiqlangan qaytarishda bonus bilan to'langan ulush balansga qaytadi, yig'ilgan bonus ulushi bekor qilinadi (balans manfiyga tushmaydi).
+6. Qo'llangan aksiya yoki imtiyoz, uning nomi va summasi `SaleLine` ga yozib qo'yiladi: aksiya keyin o'zgarsa ham eski chek o'zgarmaydi. Savdoda ishlatilgan aksiyani o'chirib bo'lmaydi, faqat to'xtatiladi.
 
 ## 2. Asosiy qarorlar va sabablari
 
@@ -66,6 +67,7 @@ Hujjat: `/api/docs/` (Swagger), sxema: `/api/schema/`.
 | `/api/pricing/settings/` | Chegirma sozlamalari (yozish: menejer) |
 | `/api/customers/?phone=&search=` | Mijozlar (qo'shish: hamma, toifani belgilash va o'chirish: menejer), `purchases_count`, `total_spent` |
 | `/api/customers/groups/` | Imtiyoz toifalari, 0–50% (yozish: menejer) |
+| `GET /api/customers/{id}/bonus/` | Mijozning bonus tarixi; ro'yxatda `bonus_available`, `bonus_pending` |
 | `/api/sales/` | `POST` savdoni yakunlash, `GET` tarix (`returned_quantity`, `return_deadline` bilan) |
 | `/api/sales/returns/` + `/approve/`, `/reject/` | Yaroqsiz tovarni qaytarish (24 soat ichida) |
 | `GET /api/sales/dashboard/?days=7\|30\|90&branch=` | Hisobot: tushum, foyda, qaytarishlar, qoldiq qiymati, sotilmayotgan tovarlar (egasi/menejer) |
@@ -95,8 +97,9 @@ Hujjat: `/api/docs/` (Swagger), sxema: `/api/schema/`.
 | 8 | Hisobotlar haqiqiy ma'lumotlarga mos | ✅ `sales/tests/test_dashboard.py` |
 | 9 | Qaytarish: muddat, sotilganidan ko'p qaytarib bo'lmaydi, tasdiqlash huquqi, qoldiqqa qaytmaydi | ✅ `sales/tests/test_returns.py` |
 | 10 | Xodim va filial boshqaruvi huquqlari | ✅ `accounts/tests/test_staff_branches.py` |
-| 12 | Imtiyoz: aksiya bilan qo'shilmaydi, tannarxdan past emas, toifani faqat menejer beradi | ✅ `customers/tests/test_customers.py` |
 | 11 | Aksiya: eng foydalisi, ustma-ust emas, tannarxdan past emas, muddat, qamrov (mavsum/kategoriya/tovar), sotuvchi chegarasi | ✅ `pricing/tests/test_promotions.py` |
+| 12 | Imtiyoz: aksiya bilan qo'shilmaydi, tannarxdan past emas, toifani faqat menejer beradi | ✅ `customers/tests/test_customers.py` |
+| 13 | Bonus: 3% pul bilan to'langanidan, 35% chegara, tannarxdan past emas, 24 soat kutish, takroriy so'rovda ikki marta yozilmaydi, qaytarishda qaytarish/bekor qilish | ✅ `customers/tests/test_bonus.py` |
 
 ## 6. Frontend tuzilishi (`frontend/src/`)
 

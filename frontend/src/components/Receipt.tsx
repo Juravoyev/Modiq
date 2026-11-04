@@ -35,7 +35,13 @@ export function Receipt({ sale, businessName }: { sale: Sale; businessName: stri
       {Number(sale.discount_total) > 0 && (
         <div className="total-row num"><span>Chegirma</span><span>−{money(sale.discount_total)}</span></div>
       )}
+      {Number(sale.bonus_spent) > 0 && (
+        <div className="total-row num"><span>Bonus bilan to'landi</span><span>−{money(sale.bonus_spent)}</span></div>
+      )}
       <div className="total-row big num"><span>Jami</span><span>{money(sale.total)}</span></div>
+      {Number(sale.bonus_earned) > 0 && (
+        <div className="total-row num"><span className="muted">Yig'ilgan bonus (24 soatdan keyin)</span><span>+{money(sale.bonus_earned)}</span></div>
+      )}
       <div className="total-row"><span className="muted">To'lov turi</span><span>{sale.payment_type_display}</span></div>
       <div className="muted" style={{ textAlign: "center", marginTop: 8 }}>Xaridingiz uchun rahmat!</div>
     </div>

@@ -23,6 +23,7 @@ export function PosPage() {
   const search = useDebounced(query.trim(), 250);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [customer, setCustomerState] = useState<CustomerBrief | null>(null);
+  const [bonusInput, setBonusInput] = useState("");
   const [payment, setPayment] = useState<PaymentType>("cash");
   // Kalit savat o'zgargandagina yangilanadi: tarmoq xatosidan keyin "qayta urinish" o'sha savdoni takrorlamaydi.
   const [idemKey, setIdemKey] = useState(newIdempotencyKey);
@@ -36,23 +37,30 @@ export function PosPage() {
   // Yakuniy narxni (aksiya, imtiyoz, chegirma) backend hisoblaydi: savdo yakunlanganda ham aynan shu qoidalar ishlaydi.
   const cartKey = JSON.stringify({
     customer: customer?.id ?? null,
+    bonus: customer ? Number(bonusInput || 0) : 0,
     lines: cart.map((l) => [l.variant.id, l.quantity, l.discount || "0"]),
   });
   const quoteKey = useDebounced(cartKey, 300);
   const [quote, setQuote] = useState<{ key: string; data: Quote | null; error: ApiError | null } | null>(null);
 
   useEffect(() => {
-    const parsed = JSON.parse(quoteKey) as { customer: number | null; lines: [number, number, string][] };
+    const parsed = JSON.parse(quoteKey) as { customer: number | null; bonus: number; lines: [number, number, string][] };
     if (!branch || parsed.lines.length === 0) { setQuote(null); return; }
     let alive = true;
     const lines = parsed.lines.map(([variant, quantity, discount_amount]) => ({ variant, quantity, discount_amount }));
-    api<Quote>("/sales/quote/", { method: "POST", body: { branch: branch.id, customer: parsed.customer, lines } })
+    api<Quote>("/sales/quote/", { method: "POST", body: { branch: branch.id, customer: parsed.customer, bonus_to_use: parsed.bonus, lines } })
       .then((data) => alive && setQuote({ key: quoteKey, data, error: null }))
       .catch((error: ApiError) => alive && setQuote({ key: quoteKey, data: null, error }));
     return () => { alive = false; };
   }, [quoteKey, branch]);
 
   const fresh = quote && quote.key === cartKey ? quote : null;
+  // Bonus chegarasi so'nggi muvaffaqiyatli hisobdan olinadi (summa oshib xato bo'lsa ham ko'rinib turadi).
+  const [bonusInfo, setBonusInfo] = useState<Quote["bonus"] | null>(null);
+  useEffect(() => {
+    if (quote?.data) setBonusInfo(quote.data.customer ? quote.data.bonus : null);
+  }, [quote]);
+  useEffect(() => { if (!customer) setBonusInfo(null); }, [customer]);
   const quoteLine = (id: number) => fresh?.data?.lines.find((l) => l.variant === id);
 
   const results = useAsync(
@@ -74,6 +82,7 @@ export function PosPage() {
 
   function setCustomer(c: CustomerBrief | null) {
     setCustomerState(c);
+    setBonusInput("");
     setIdemKey(newIdempotencyKey());
     setError(null);
   }
@@ -131,12 +140,14 @@ export function PosPage() {
           payment_type: payment,
           allow_below_cost: belowCostConfirmed,
           customer: customer?.id ?? null,
+          bonus_to_use: customer ? Number(bonusInput || 0) : 0,
           lines: cart.map((l) => ({ variant: l.variant.id, quantity: l.quantity, discount_amount: l.discount || "0" })),
         },
       });
       setDone(sale);
       setCart([]);
       setCustomerState(null);
+      setBonusInput("");
       setPayment("cash");
       setIdemKey(newIdempotencyKey());
       setNeedBelowCostConfirm(false);
@@ -258,11 +269,41 @@ export function PosPage() {
         )}
 
         <CustomerPicker value={customer} onChange={setCustomer} />
+        {customer && bonusInfo?.enabled && (
+          <div className="stack" style={{ gap: 6 }}>
+            <div className="spread">
+              <span>🎁 Bonus: <b className="num">{money(bonusInfo.available)}</b></span>
+              {Number(bonusInfo.pending) > 0 && (
+                <span className="muted">+{money(bonusInfo.pending)} 24 soatdan keyin</span>
+              )}
+            </div>
+            {Number(bonusInfo.available) > 0 && (
+              <div className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+                <input className="input" inputMode="numeric" placeholder={`Bonusdan to'lash (ko'pi bilan ${money(bonusInfo.max)})`}
+                       value={bonusInput} aria-label="Bonusdan to'lanadigan summa"
+                       onChange={(e) => { setBonusInput(e.target.value.replace(/[^\d]/g, "")); setIdemKey(newIdempotencyKey()); }} />
+                <button className="btn btn-secondary" disabled={Number(bonusInfo.max) <= 0}
+                        onClick={() => { setBonusInput(String(Math.floor(Number(bonusInfo.max)))); setIdemKey(newIdempotencyKey()); }}>
+                  Maksimal
+                </button>
+              </div>
+            )}
+            <span className="muted">
+              Chekning ko'pi bilan {bonusInfo.max_share_percent}% bonus bilan to'lanadi. Har xariddan {bonusInfo.percent}% bonus yig'iladi.
+            </span>
+          </div>
+        )}
 
         <div>
           <div className="total-row num"><span>Summa</span><span>{money(totals.subtotal)}</span></div>
           <div className="total-row num"><span>Chegirma</span><span>{totals.discount > 0 ? `−${money(totals.discount)}` : money(0)}</span></div>
+          {fresh?.data && Number(fresh.data.bonus.used) > 0 && (
+            <div className="total-row num"><span>Bonus bilan</span><span>−{money(fresh.data.bonus.used)}</span></div>
+          )}
           <div className="total-row big num"><span>Jami</span><span>{money(totals.total)}</span></div>
+          {fresh?.data && Number(fresh.data.bonus.earned) > 0 && (
+            <div className="total-row num muted"><span>Bu xariddan bonus</span><span>+{money(fresh.data.bonus.earned)}</span></div>
+          )}
         </div>
 
         <div className="row" role="radiogroup" aria-label="To'lov turi">

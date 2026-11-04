@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.validators import MaxValueValidator
 from django.db import models
 from django.db.models import Q
@@ -46,3 +47,32 @@ class Customer(BusinessOwnedModel):
     @property
     def discount_percent(self) -> int:
         return self.group.discount_percent if self.group_id else 0
+
+
+class BonusTransaction(BusinessOwnedModel):
+    """Bonus jurnali (StockMovement kabi): balans har doim shu yozuvlar yig'indisi, alohida saqlanmaydi.
+
+    Yangi yig'ilgan bonus qaytarish muddati (24 soat) o'tgach ishlatiladi (available_at).
+    Shunda tovar qaytarilsa, bonus hali sarflanmagan bo'ladi va balans manfiyga tushmaydi.
+    """
+
+    class Kind(models.TextChoices):
+        EARN = "earn", "Xariddan yig'ildi"
+        SPEND = "spend", "Xaridda ishlatildi"
+        REFUND = "refund", "Qaytarishda qaytarildi"
+        REVOKE = "revoke", "Qaytarish sababli bekor qilindi"
+
+    customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name="bonus_transactions")
+    kind = models.CharField(max_length=16, choices=Kind.choices)
+    # Musbat — balansga qo'shiladi, manfiy — ayiriladi. Butun so'm.
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    sale = models.ForeignKey("sales.Sale", null=True, blank=True, on_delete=models.PROTECT, related_name="bonus_transactions")
+    sale_return = models.ForeignKey("sales.SaleReturn", null=True, blank=True, on_delete=models.PROTECT,
+                                    related_name="bonus_transactions")
+    available_at = models.DateTimeField("Ishlatish mumkin bo'lgan vaqt")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=~Q(amount=0), name="bonus_amount_non_zero")]
+        indexes = [models.Index(fields=["customer", "available_at"])]
+        ordering = ["-created_at", "-id"]

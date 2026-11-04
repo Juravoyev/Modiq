@@ -1,4 +1,4 @@
-"""Narx hisoblash: aksiya, mijoz imtiyozi va qo'lda chegirma.
+"""Narx hisoblash: aksiya, mijoz imtiyozi, qo'lda chegirma va bonus bilan to'lov.
 
 Kassadagi "oldindan hisob" (quote) ham, savdoni yakunlash ham shu bitta funksiyadan foydalanadi.
 Shu sababli ekranda ko'rsatilgan summa bilan bazaga yozilgan summa bir xil qoidalar bo'yicha hisoblanadi.
@@ -9,12 +9,16 @@ Qoidalar:
 - Avtomatik chegirma narxni tannarxdan pastga tushirmaydi.
 - Sotuvchining qo'lda beradigan chegirmasi sozlamadagi foiz bilan cheklangan. Egasi va menejerda chegara yo'q,
   lekin tannarxdan past sotish uchun alohida tasdiq kerak (sales.services.create_sale).
+- Bonus bilan chekning ko'pi bilan `bonus_max_share_percent` foizi to'lanadi va bonus ham narxni tannarxdan
+  pastga tushirmaydi. Yangi bonus mijoz pul bilan to'lagan summadan hisoblanadi.
 """
 from dataclasses import dataclass, field
 from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
 
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
+
+from apps.customers.bonus import allocate, balances, floor_soum
 
 from .models import PricingSettings, Promotion
 
@@ -44,6 +48,7 @@ class PricedLine:
     promotion: object = None
     discount_label: str = ""
     manual_discount: Decimal = ZERO
+    bonus_amount: Decimal = ZERO  # shu qatorga to'g'ri kelgan bonus to'lovi
 
     @property
     def gross(self) -> Decimal:
@@ -54,12 +59,18 @@ class PricedLine:
         return self.unit_cost * self.quantity
 
     @property
-    def line_total(self) -> Decimal:
+    def after_discounts(self) -> Decimal:
         return self.gross - self.auto_discount - self.manual_discount
 
     @property
+    def line_total(self) -> Decimal:
+        """Mijoz pul bilan to'laydigan qism."""
+        return self.after_discounts - self.bonus_amount
+
+    @property
     def below_cost(self) -> bool:
-        return self.line_total < self.cost
+        # Bonus qatorning bo'sh joyidan (narx − tannarx) oshmaydi, shuning uchun bu chegirmalar bo'yicha tekshiriladi.
+        return self.after_discounts < self.cost
 
 
 @dataclass
@@ -69,6 +80,14 @@ class Quote:
     customer: object = None
     today: object = None
     below_cost_skus: list = field(default_factory=list)
+    bonus_available: Decimal = ZERO
+    bonus_pending: Decimal = ZERO
+    bonus_max: Decimal = ZERO  # shu chekda bonus bilan ko'pi bilan qancha to'lash mumkin
+    bonus_earned: Decimal = ZERO  # shu xariddan yig'iladigan bonus
+
+    @property
+    def bonus_used(self) -> Decimal:
+        return sum((ln.bonus_amount for ln in self.lines), ZERO)
 
     @property
     def subtotal(self) -> Decimal:
@@ -127,7 +146,7 @@ def privilege_discount(customer, unit_price: Decimal, unit_cost: Decimal) -> Dec
     return min(d, max(ZERO, unit_price - unit_cost))
 
 
-def price_cart(*, business, membership, lines, customer=None, today=None) -> Quote:
+def price_cart(*, business, membership, lines, customer=None, bonus_to_use=ZERO, today=None) -> Quote:
     """Savat narxini hisoblaydi. Noto'g'ri chegirmada ValidationError ({"detail", "code"})."""
     if not lines:
         raise ValidationError({"detail": "Savat bo'sh."})
@@ -161,7 +180,27 @@ def price_cart(*, business, membership, lines, customer=None, today=None) -> Quo
 
     quote = Quote(lines=priced, settings=settings, customer=customer, today=today)
     quote.below_cost_skus = [ln.variant.sku for ln in priced if ln.below_cost]
+    _apply_bonus(quote, customer, bonus_to_use or ZERO, settings)
     return quote
+
+
+def _apply_bonus(quote: Quote, customer, bonus_to_use: Decimal, settings: PricingSettings):
+    if bonus_to_use < 0 or bonus_to_use != floor_soum(bonus_to_use):
+        raise ValidationError({"detail": "Bonus summasi butun musbat son bo'lishi kerak.", "code": "invalid_bonus"})
+    if customer is None or not settings.bonus_enabled:
+        if bonus_to_use > 0:
+            raise ValidationError({"detail": "Bonusdan foydalanish uchun mijozni tanlang.", "code": "invalid_bonus"})
+        return
+    quote.bonus_available, quote.bonus_pending = balances(customer)
+    headrooms = [floor_soum(max(ZERO, ln.after_discounts - ln.cost)) for ln in quote.lines]
+    share_cap = floor_soum(quote.total * settings.bonus_max_share_percent / 100)
+    quote.bonus_max = max(ZERO, min(floor_soum(quote.bonus_available), share_cap, sum(headrooms, ZERO)))
+    if bonus_to_use > quote.bonus_max:
+        raise ValidationError({"detail": f"Bonusdan ko'pi bilan {quote.bonus_max:.0f} so'm ishlatish mumkin.",
+                               "code": "bonus_limit"})
+    for ln, part in zip(quote.lines, allocate(bonus_to_use, headrooms)):
+        ln.bonus_amount = part
+    quote.bonus_earned = floor_soum(quote.total * settings.bonus_percent / 100)
 
 
 def _apply_manual_discount(pl: PricedLine, amount: Decimal, membership, settings: PricingSettings):

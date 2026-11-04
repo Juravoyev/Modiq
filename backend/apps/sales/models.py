@@ -28,6 +28,9 @@ class Sale(BusinessOwnedModel):
     discount_total = models.DecimalField("Chegirma", **MONEY)
     total = models.DecimalField("Yakuniy summa (tushum)", **MONEY)
     cost_total = models.DecimalField("Tannarx", **MONEY)
+    # Bonus bilan to'langan qism (tushumga kirmaydi) va shu xariddan yig'ilgan bonus.
+    bonus_spent = models.DecimalField(default=0, **MONEY)
+    bonus_earned = models.DecimalField(default=0, **MONEY)
     note = models.CharField(max_length=255, blank=True)
 
     class Meta:
@@ -58,6 +61,8 @@ class SaleLine(TimeStampedModel):
     discount_label = models.CharField(max_length=200, blank=True)
     # Sotuvchi yoki menejer qo'lda bergan chegirma.
     discount_amount = models.DecimalField(default=0, **MONEY)
+    # Shu qatorga to'g'ri kelgan bonus to'lovi. line_total — mijoz pul bilan to'lagan qism.
+    bonus_amount = models.DecimalField(default=0, **MONEY)
     line_total = models.DecimalField(**MONEY)
     unit_cost = models.DecimalField(**MONEY)
     below_cost = models.BooleanField(default=False)
@@ -89,6 +94,9 @@ class SaleReturn(BusinessOwnedModel):
     reason = models.CharField("Yaroqsizlik sababi", max_length=255)
     refund_total = models.DecimalField("Mijozga qaytariladigan summa", **MONEY)
     cost_total = models.DecimalField("Hisobdan chiqarilgan tannarx (zarar)", **MONEY)
+    # Bonus bilan to'langan qism mijoz balansiga qaytariladi; shu xariddan yig'ilgan bonusning ulushi bekor qilinadi.
+    bonus_refund = models.DecimalField(default=0, **MONEY)
+    bonus_revoked = models.DecimalField(default=0, **MONEY)
     requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
     decided_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
                                    related_name="+")
@@ -109,6 +117,7 @@ class SaleReturnLine(TimeStampedModel):
     sale_line = models.ForeignKey(SaleLine, on_delete=models.PROTECT, related_name="return_lines")
     quantity = models.PositiveIntegerField()
     refund_amount = models.DecimalField(**MONEY)
+    bonus_refund = models.DecimalField(default=0, **MONEY)
     unit_cost = models.DecimalField(**MONEY)
 
     class Meta:
