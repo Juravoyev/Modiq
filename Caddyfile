@@ -1,0 +1,8 @@
+# Tashqi kirish nuqtasi. SITE_ADDRESS domen bo'lsa (masalan modiq.dehqon-ota.uz), Caddy Let's Encrypt
+# sertifikatini o'zi oladi, yangilaydi va HTTP ni HTTPS ga yo'naltiradi. Domen bo'lmasa ":80" (faqat HTTP).
+{$SITE_ADDRESS::80} {
+	reverse_proxy web:80 {
+		# Yordamchi javobi bo'lak-bo'lak keladi: buferlamasdan darhol uzatiladi.
+		flush_interval -1
+	}
+}

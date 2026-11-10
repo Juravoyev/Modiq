@@ -37,15 +37,31 @@ services:
   web:
     build: ./frontend
     restart: unless-stopped
-    ports:
-      - "80:80"
     volumes:
       - static:/var/www/static:ro
       - media:/var/www/media:ro
     depends_on:
       - backend
 
+  # Tashqariga faqat Caddy ochiladi (80, 443): HTTPS sertifikatini o'zi oladi va web ga uzatadi.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+
 volumes:
   pgdata:
   static:
   media:
+  caddy_data:
+  caddy_config:

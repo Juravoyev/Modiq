@@ -1,45 +1,85 @@
 # Serverga joylash (AWS EC2)
 
-Loyiha serverda uchta Docker konteynerda ishlaydi (`docker-compose.prod.yml`):
+Loyiha serverda to'rtta Docker konteynerda ishlaydi (`docker-compose.prod.yml`):
 
 | Konteyner | Vazifasi |
 |---|---|
 | `db` | PostgreSQL 16. Port tashqariga ochilmaydi |
 | `backend` | Django + Gunicorn. Ishga tushganda `migrate` va `collectstatic` ni o'zi bajaradi |
 | `web` | Nginx: React ilovasini beradi, `/api/` va `/admin/` ni backendga yo'naltiradi, `/static/` va `/media/` fayllarini beradi |
+| `caddy` | Tashqi kirish nuqtasi (80, 443). Domen berilsa, Let's Encrypt HTTPS sertifikatini o'zi oladi va yangilaydi |
 
-Tashqariga faqat 80-port ochiladi. Ishga tushgandan keyin:
+Ishga tushgandan keyin (domen `modiq.dehqon-ota.uz` bo'lsa):
 
-- Ilova: `http://<IP>/`
-- Swagger: `http://<IP>/api/docs/`
-- Admin: `http://<IP>/admin/`
+- Ilova: `https://modiq.dehqon-ota.uz/`
+- Swagger: `https://modiq.dehqon-ota.uz/api/docs/`
+- Admin: `https://modiq.dehqon-ota.uz/admin/`
 
-## 1. EC2 server yaratish
+## 1. EC2 server
 
-AWS Console → **EC2** → **Launch instance**:
+AWS Console → **EC2** → **Launch instance**: Ubuntu Server 24.04 LTS, *Free tier eligible* belgisi bor tur (`t3.micro`), 20 GB disk.
 
-1. **Name:** `modiq`
-2. **AMI:** Ubuntu Server 24.04 LTS (*Free tier eligible*)
-3. **Instance type:** *Free tier eligible* belgisi bor turi (`t2.micro` yoki `t3.micro`, 1 GB RAM)
-4. **Key pair:** *Create new key pair* → nomi `modiq`, turi RSA, formati `.pem`. Yuklab olingan faylni saqlab qo'ying: uni qayta yuklab bo'lmaydi
-5. **Network settings → Edit:**
-   - SSH (22): Source = *My IP*
-   - *Add security group rule*: HTTP (80), Source = *Anywhere (0.0.0.0/0)*
-6. **Storage:** 20 GB gp3 (free tier 30 GB gacha)
-7. **Launch instance**
+### Elastic IP (doimiy manzil)
 
-Instance ro'yxatida *Public IPv4 address* ni ko'chirib oling (pastda `<IP>` deb yozilgan joylarga qo'yiladi).
+Oddiy ommaviy IP instance to'xtatilib qayta yoqilganda o'zgaradi va domen ishlamay qoladi. Shuning uchun:
 
-> IP manzil instance to'xtatilib qayta yoqilsa o'zgaradi. Doimiy manzil kerak bo'lsa, **Elastic IP** ajratib, instance'ga biriktiring (ishlab turgan instance'ga biriktirilgan bo'lsa, to'lovsiz).
+1. EC2 → **Elastic IPs** → **Allocate Elastic IP address** → **Allocate**
+2. Yangi IP ni belgilang → **Actions** → **Associate Elastic IP address** → Instance: `modiq` → **Associate**
 
-## 2. Serverga ulanish
+Pastda `<IP>` deb yozilgan joylarga shu Elastic IP qo'yiladi.
+
+### Portlarni ochish (Security group)
+
+Instance → **Security** tab → security group nomi (`launch-wizard-1`) → **Edit inbound rules** → **Add rule**:
+
+| Type | Source |
+|---|---|
+| SSH (22) | allaqachon bor |
+| HTTP (80) | Anywhere-IPv4 (0.0.0.0/0) |
+| HTTPS (443) | Anywhere-IPv4 (0.0.0.0/0) |
+
+**Save rules**.
+
+## 2. Domen (subdomain)
+
+Mavjud domenga subdomain qo'shiladi, asosiy sayt (`dehqon-ota.uz`) o'zgarmaydi. Eskiz → **Domen** → `dehqon-ota.uz` → **DNS** → **+ Qo'shish**:
+
+| Name | Type | TTL | Record |
+|---|---|---|---|
+| `modiq` | A | 3600 | `<IP>` |
+
+Tekshirish (5-30 daqiqa ichida ishlaydi): `dig +short modiq.dehqon-ota.uz` buyrug'i `<IP>` ni chiqarishi kerak.
+
+## 3. Serverga ulanish
+
+**Key pair bilan** (instance yaratishda `.pem` yuklab olingan bo'lsa):
 
 ```bash
 chmod 400 ~/Downloads/modiq.pem
 ssh -i ~/Downloads/modiq.pem ubuntu@<IP>
 ```
 
-## 3. Serverni tayyorlash (bir marta)
+**Key pair'siz:** Instance → **Connect** → **EC2 Instance Connect** → Username `ubuntu` → **Connect**. Brauzerda terminal ochiladi.
+
+Keyin o'z kompyuteringizdan oddiy `ssh` bilan ulanish uchun, kompyuteringizda kalit yarating va ochiq qismini serverga qo'shing:
+
+```bash
+# o'z kompyuteringizda
+ssh-keygen -t ed25519 -f ~/.ssh/modiq_ec2 -N ""
+cat ~/.ssh/modiq_ec2.pub
+```
+
+```bash
+# brauzerdagi EC2 terminalida (yuqoridagi chiqqan qatorni qo'ying)
+echo 'ssh-ed25519 AAAA... ' >> ~/.ssh/authorized_keys
+```
+
+```bash
+# o'z kompyuteringizda
+ssh -i ~/.ssh/modiq_ec2 ubuntu@<IP>
+```
+
+## 4. Serverni tayyorlash (bir marta)
 
 1 GB RAM frontendni yig'ish uchun kamlik qilishi mumkin, shuning uchun 2 GB swap qo'shamiz:
 
@@ -57,9 +97,9 @@ sudo usermod -aG docker ubuntu
 exit
 ```
 
-`exit` dan keyin qayta `ssh` bilan ulaning (docker guruhi yangi sessiyada kuchga kiradi). Tekshirish: `docker compose version`.
+`exit` dan keyin qayta ulaning (docker guruhi yangi sessiyada kuchga kiradi). Tekshirish: `docker compose version`.
 
-## 4. Loyihani yuklab olish va sozlash
+## 5. Loyihani yuklab olish va sozlash
 
 ```bash
 git clone https://github.com/Juravoyev/Modiq.git
@@ -74,87 +114,89 @@ python3 -c "import secrets; print('SECRET_KEY=' + secrets.token_urlsafe(50))"
 python3 -c "import secrets; print('POSTGRES_PASSWORD=' + secrets.token_hex(16))"
 ```
 
-`nano .env.prod` bilan oching va quyidagilarni o'zgartiring:
+`nano .env.prod` bilan oching va o'zgartiring:
 
-- `SECRET_KEY` va `POSTGRES_PASSWORD`: yuqoridagi buyruqlar chiqargan qiymatlar
-- `ALLOWED_HOSTS=<IP>`
-- `CSRF_TRUSTED_ORIGINS=http://<IP>`
-- `GEMINI_API_KEY`: AI yordamchi va tavsiyalar xulosasi uchun (ixtiyoriy)
+```ini
+SITE_ADDRESS=modiq.dehqon-ota.uz
+SECRET_KEY=...            # yuqoridagi buyruq chiqargan qiymat
+POSTGRES_PASSWORD=...     # yuqoridagi buyruq chiqargan qiymat
+ALLOWED_HOSTS=modiq.dehqon-ota.uz,<IP>
+CSRF_TRUSTED_ORIGINS=https://modiq.dehqon-ota.uz
+SECURE_COOKIES=True
+GEMINI_API_KEY=...        # ixtiyoriy: AI yordamchi va tavsiyalar xulosasi
+```
+
+Domen yo'q bo'lsa: `SITE_ADDRESS=:80`, `CSRF_TRUSTED_ORIGINS=http://<IP>`, `SECURE_COOKIES=False`.
 
 Saqlash: `Ctrl+O`, `Enter`, chiqish: `Ctrl+X`.
 
-## 5. Ishga tushirish
+## 6. Ishga tushirish
+
+Uzun buyruqni qisqartirish uchun alias:
 
 ```bash
-docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+echo "alias dc='docker compose -f ~/Modiq/docker-compose.prod.yml --env-file ~/Modiq/.env.prod'" >> ~/.bashrc
+source ~/.bashrc
+```
+
+```bash
+dc up -d --build
 ```
 
 Birinchi marta 5-10 daqiqa oladi (image'lar yuklanadi, frontend yig'iladi). Holatni tekshirish:
 
 ```bash
-docker compose -f docker-compose.prod.yml --env-file .env.prod ps
-docker compose -f docker-compose.prod.yml --env-file .env.prod logs -f backend
+dc ps                 # hamma konteyner "Up" bo'lishi kerak
+dc logs -f backend    # chiqish: Ctrl+C
+dc logs caddy         # HTTPS sertifikati olinganini ko'rish
 ```
-
-Brauzerda `http://<IP>/api/docs/` ni oching.
 
 Demo do'kon va admin foydalanuvchi:
 
 ```bash
-docker compose -f docker-compose.prod.yml --env-file .env.prod exec backend python manage.py seed_demo
-docker compose -f docker-compose.prod.yml --env-file .env.prod exec backend python manage.py createsuperuser
+dc exec backend python manage.py seed_demo
+dc exec backend python manage.py createsuperuser
 ```
 
-Demo kirish ma'lumotlari README da: `+998 90 000 00 01`, parol `Demo-12345`.
+Demo kirish: `+998 90 000 00 01` (egasi), parol `Demo-12345`. Boshqa xodimlar README da.
 
-Har safar uzun buyruq yozmaslik uchun alias qo'shish mumkin:
-
-```bash
-echo "alias dc='docker compose -f ~/Modiq/docker-compose.prod.yml --env-file ~/Modiq/.env.prod'" >> ~/.bashrc
-source ~/.bashrc
-dc ps
-```
-
-## 6. Swagger'da sinash
+## 7. Swagger'da sinash
 
 1. `POST /api/auth/login/` → *Try it out* → telefon va parol → *Execute*. Javobdan `access` tokenni ko'chiring
 2. Yuqoridagi **Authorize** tugmasi → tokenni qo'ying → *Authorize*
 3. Endi istalgan endpointni chaqirish mumkin, masalan `GET /api/catalog/products/`
 
-## 7. Yangilash
+## 8. Yangilash
 
 GitHub'ga yangi o'zgarish yuklangandan keyin, serverda:
 
 ```bash
 cd ~/Modiq
 git pull
-docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+dc up -d --build
 ```
 
 Migratsiyalar backend qayta ishga tushganda avtomatik bajariladi. Ma'lumotlar (`pgdata`, `media` volume'lari) saqlanib qoladi.
 
-## 8. Zaxira nusxa (backup)
+## 9. Zaxira nusxa (backup)
 
 ```bash
-docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T db pg_dump -U modiq modiq | gzip > modiq-$(date +%F).sql.gz
+dc exec -T db pg_dump -U modiq modiq | gzip > modiq-$(date +%F).sql.gz
 ```
 
 Tiklash:
 
 ```bash
-gunzip -c modiq-2026-11-10.sql.gz | docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T db psql -U modiq modiq
+gunzip -c modiq-2026-11-10.sql.gz | dc exec -T db psql -U modiq modiq
 ```
 
 ## Muammolar
 
 | Belgisi | Sababi va yechimi |
 |---|---|
-| Sahifa ochilmaydi | Security group'da 80-port ochiqmi? `docker compose ... ps` da hamma konteyner `Up`mi? |
-| `Bad Request (400)` | `.env.prod` dagi `ALLOWED_HOSTS` da IP yo'q. Tuzatib, `up -d` ni qayta bajaring |
-| `/admin/` ga kirishda CSRF xatosi | `CSRF_TRUSTED_ORIGINS=http://<IP>` va `SECURE_COOKIES=False` ekanini tekshiring |
+| Sahifa ochilmaydi | Security group'da 80 va 443 ochiqmi? `dc ps` da hamma konteyner `Up`mi? |
+| HTTPS ishlamaydi, `dc logs caddy` da sertifikat xatosi | DNS hali tarqalmagan yoki noto'g'ri IP: `dig +short modiq.dehqon-ota.uz`. To'g'rilangach `dc restart caddy` |
+| `Bad Request (400)` | `.env.prod` dagi `ALLOWED_HOSTS` da domen/IP yo'q. Tuzatib, `dc up -d` |
+| `/admin/` ga kirishda CSRF xatosi | `CSRF_TRUSTED_ORIGINS` aynan brauzerdagi manzil (`https://...`) bilan bir xilmi? |
 | Build paytida `Killed` | Xotira yetmadi: swap qo'shilganini tekshiring (`free -h`) |
-| `502 Bad Gateway` | Backend hali ishga tushmagan yoki xato bilan to'xtagan: `logs backend` |
-
-## HTTPS (keyinroq)
-
-Domen olingandan keyin Let's Encrypt (certbot) bilan HTTPS sozlanadi va `.env.prod` da `SECURE_COOKIES=True` qilinadi. HTTPS bo'lmasa ham API va Swagger to'liq ishlaydi, faqat PWA'ni telefonga o'rnatish uchun HTTPS kerak.
+| `502 Bad Gateway` | Backend hali ishga tushmagan yoki xato bilan to'xtagan: `dc logs backend` |
