@@ -11,7 +11,8 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-RUN useradd --create-home modiq && chown -R modiq /app
+# staticfiles va media docker volume sifatida ulanadi; egasi modiq bo'lishi uchun oldindan yaratiladi.
+RUN useradd --create-home modiq && mkdir -p staticfiles media && chown -R modiq /app
 USER modiq
 
 EXPOSE 8000

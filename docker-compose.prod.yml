@@ -1,0 +1,51 @@
+# Serverda ishga tushirish (batafsil: docs/DEPLOY.md):
+#   cp .env.prod.example .env.prod   # qiymatlarni o'zgartiring
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-modiq}
+      POSTGRES_USER: ${POSTGRES_USER:-modiq}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD .env.prod da berilishi shart}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # Port tashqariga ochilmaydi: bazaga faqat backend ulanadi.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-modiq}"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-modiq}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-modiq}
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 120 --access-logfile -"
+    volumes:
+      - static:/app/staticfiles
+      - media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - static:/var/www/static:ro
+      - media:/var/www/media:ro
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  static:
+  media:

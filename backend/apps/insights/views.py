@@ -1,5 +1,7 @@
 from decimal import Decimal
 
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import permissions
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -36,6 +38,7 @@ def _branches(request):
     return branches
 
 
+@extend_schema(parameters=[OpenApiParameter("branch", int, description="Filial id (ixtiyoriy)")], responses=OpenApiTypes.OBJECT)
 class RecommendationsView(APIView):
     """Sotilmay qolish xavfi bo'lgan tovarlar va tavsiya qilingan chegirma (egasi va menejer). ?branch=<id>"""
 
@@ -47,6 +50,9 @@ class RecommendationsView(APIView):
                                 "ai_configured": llm.configured()}))
 
 
+@extend_schema(request=None, responses=OpenApiTypes.OBJECT, parameters=[
+    OpenApiParameter("branch", int, description="Filial id (ixtiyoriy)"),
+    OpenApiParameter("refresh", int, enum=[1], description="1 — keshni chetlab o'tish")])
 class SummaryView(APIView):
     """Gemini xulosasi. POST ?branch=<id>&refresh=1 — keshni chetlab o'tib qayta yozdirish."""
 
@@ -59,6 +65,7 @@ class SummaryView(APIView):
         return Response(result)
 
 
+@extend_schema(request=DismissSerializer, responses=OpenApiTypes.OBJECT)
 class DismissView(APIView):
     """Tavsiyani rad etish: tovar N kun (standart 30) tavsiyalarda ko'rinmaydi."""
 
@@ -72,6 +79,7 @@ class DismissView(APIView):
         return Response({"until": until.isoformat()})
 
 
+@extend_schema(request=InsightSettingsSerializer, responses=InsightSettingsSerializer)
 class InsightSettingsView(APIView):
     permission_classes = MANAGER
 

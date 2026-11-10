@@ -2,6 +2,8 @@ import logging
 
 from django.core.cache import cache
 from django.http import StreamingHttpResponse
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -22,6 +24,7 @@ def _stream_response(chunks):
     return res
 
 
+@extend_schema(responses=OpenApiTypes.OBJECT)
 class TopicsView(APIView):
     """Xodimning roliga mos tayyor mavzular (AI'siz, darhol)."""
 
@@ -31,6 +34,8 @@ class TopicsView(APIView):
         return Response({"topics": topics, "ai_configured": llm.configured()})
 
 
+@extend_schema(request=AskSerializer, responses={
+    (200, "text/plain"): OpenApiResponse(OpenApiTypes.STR, description="Javob matni bo'lak-bo'lak (stream)")})
 class AskView(APIView):
     """Erkin savol. Javob oddiy matn sifatida bo'lak-bo'lak (stream) qaytadi.
 

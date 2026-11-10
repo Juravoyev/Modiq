@@ -1,5 +1,7 @@
 from decimal import Decimal
 
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import mixins, permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -145,6 +147,9 @@ def _decimals_to_str(value):
     return value
 
 
+@extend_schema(responses=OpenApiTypes.OBJECT, parameters=[
+    OpenApiParameter("branch", int, description="Filial id (ixtiyoriy)"),
+    OpenApiParameter("days", int, enum=[7, 30, 90], default=30)])
 class DashboardView(APIView):
     """Egasi va menejer uchun umumiy ko'rsatkichlar. ?branch=<id> (ixtiyoriy), ?days=7|30|90."""
 

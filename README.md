@@ -40,6 +40,8 @@ API hujjati: http://localhost:8000/api/docs/
 
 Docker bilan: `backend/.env` yarating, keyin loyiha ildizida `docker compose up --build`.
 
+Serverga (AWS EC2) joylash: [docs/DEPLOY.md](docs/DEPLOY.md). Production'da Nginx + Gunicorn + PostgreSQL Docker konteynerlarida ishlaydi (`docker-compose.prod.yml`).
+
 ### AI: yordamchi va tavsiyalar xulosasi (ixtiyoriy)
 
 "✨ Yordamchi"dagi erkin savollarga javobni va "Tavsiyalar" sahifasidagi qisqa xulosani Google Gemini yozadi. Buning uchun https://aistudio.google.com/apikey dan kalit oling va `backend/.env` ga qo'shing:

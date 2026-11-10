@@ -10,6 +10,7 @@ env = environ.Env(
     DEBUG=(bool, False),
     ALLOWED_HOSTS=(list, ["localhost", "127.0.0.1"]),
     CORS_ALLOWED_ORIGINS=(list, []),
+    CSRF_TRUSTED_ORIGINS=(list, []),
 )
 environ.Env.read_env(BASE_DIR / ".env")
 
@@ -124,14 +125,21 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Kiyim do'konlari uchun tovar, ombor va savdo tizimi",
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    # Ikkita "role" maydoni bor: xodim roli va Yordamchi suhbatidagi xabar muallifi.
+    "ENUM_NAME_OVERRIDES": {
+        "MembershipRoleEnum": "apps.accounts.models.Membership.Role",
+        "ChatRoleEnum": ["user", "assistant"],
+    },
 }
 
 CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
+# Nginx ortida /admin/ ga kirish uchun, masalan: http://1.2.3.4,https://modiq.uz
+CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
 
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
+    # HTTPS hali sozlanmagan serverda SECURE_COOKIES=False bo'lishi kerak, aks holda admin login ishlamaydi.
+    SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = env.bool("SECURE_COOKIES", default=True)
     SECURE_CONTENT_TYPE_NOSNIFF = True
 
 LOGGING = {

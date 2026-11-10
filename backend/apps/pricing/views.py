@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.db.models import Count, DecimalField, IntegerField, OuterRef, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -82,6 +83,7 @@ class PromotionViewSet(BusinessScopedViewSet):
         return self._respond(promo)
 
 
+@extend_schema(request=PricingSettingsSerializer, responses=PricingSettingsSerializer)
 class PricingSettingsView(APIView):
     """Chegirma sozlamalari: o'qish hammaga (kassa chegarani ko'rsatadi), o'zgartirish egasi va menejerga."""
 
