@@ -3,6 +3,24 @@ Merchandise, warehouse, sales, and decision-support system for small-scale fashi
 
 Kichik kiyim, oyoq kiyim va sumka do'konlari uchun tovar (rang × o'lcham variantlari), ombor, kassa va qaror qabul qilishni qo'llab-quvvatlash tizimi.
 
+## Jonli demo
+
+| | |
+|---|---|
+| Ilova | https://modiq.dehqon-ota.uz |
+| Swagger (API hujjati) | https://modiq.dehqon-ota.uz/api/docs/ |
+
+Demo kirish: telefon `+998 90 000 00 01` (do'kon egasi), parol `Demo-12345`. Sotuvchi ko'rinishi: `+998 90 000 00 03`.
+Swagger'da: `POST /api/auth/login/` → javobdagi `access` tokenni **Authorize** tugmasiga qo'ying.
+
+## Texnologiyalar
+
+- **Backend:** Python 3.12, Django 5.1, Django REST Framework, JWT (SimpleJWT), PostgreSQL 16, drf-spectacular (Swagger)
+- **Frontend:** React 19, TypeScript, Vite (PWA)
+- **Infratuzilma:** Docker Compose (PostgreSQL, Gunicorn, Nginx, Caddy), AWS EC2, Let's Encrypt HTTPS
+- **AI:** Google Gemini (ixtiyoriy)
+- **Testlar:** 133 ta avtomatik test (PostgreSQL ustida)
+
 Arxitektura va reja: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
 ## Imkoniyatlar
