@@ -8,6 +8,7 @@ import { Empty, ErrorBox, Loading, Pagination, Success } from "../components/ui"
 import { dateTime, money } from "../utils/format";
 import { useAsync } from "../utils/useAsync";
 import { bonusNote, ReturnForm } from "./ReturnsPage";
+import { Icon } from "../components/Icon";
 
 export function SalesPage() {
   const { branch, me, isManager } = useAuth();
@@ -40,7 +41,7 @@ export function SalesPage() {
           }} />
         ) : canReturn && (
           <button className="btn btn-secondary no-print" onClick={() => { setReturning(true); setNotice(null); }}>
-            ↩ Yaroqsiz tovarni qaytarish
+            <Icon name="undo" size={16} /> Yaroqsiz tovarni qaytarish
           </button>
         )}
         {isManager && selected.gross_profit !== undefined && (

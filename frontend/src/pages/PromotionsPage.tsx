@@ -8,6 +8,7 @@ import type {
 import { Empty, ErrorBox, Field, Loading, Success } from "../components/ui";
 import { money } from "../utils/format";
 import { useAsync, useDebounced } from "../utils/useAsync";
+import { Icon } from "../components/Icon";
 
 interface Season extends NamedRef { start_month: number; end_month: number }
 
@@ -113,7 +114,7 @@ function ProductPicker({ value, onChange, error }: {
           <span key={p.id} className="badge badge-ok">
             {p.name}
             <button type="button" aria-label={`${p.name} ni olib tashlash`} onClick={() => onChange(value.filter((x) => x.id !== p.id))}
-                    style={{ border: "none", background: "none", cursor: "pointer", color: "inherit", padding: 0 }}>✕</button>
+                    className="badge-remove"><Icon name="x" size={13} /></button>
           </span>
         ))}
       </div>
@@ -406,7 +407,7 @@ export function PromotionsPage() {
                   <tr key={p.id}>
                     <td>
                       <b>{p.label}</b>
-                      {p.source === "recommendation" && <div><span className="badge badge-neutral">💡 Tavsiyadan</span></div>}
+                      {p.source === "recommendation" && <div><span className="badge badge-neutral"><Icon name="bulb" size={12} /> Tavsiyadan</span></div>}
                     </td>
                     <td>{scopeText(p)}</td>
                     <td className="num" style={{ whiteSpace: "nowrap" }}>{day(p.starts_on)} – {day(p.ends_on)}</td>
@@ -424,12 +425,12 @@ export function PromotionsPage() {
                     </td>
                     <td>
                       <div className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
-                        <button className="btn btn-secondary btn-sm" onClick={() => { setEditing(p); setMessage(null); }}>✎</button>
+                        <button className="btn btn-secondary btn-sm" onClick={() => { setEditing(p); setMessage(null); }} aria-label="Tahrirlash" title="Tahrirlash"><Icon name="pencil" size={15} /></button>
                         {p.is_active
                           ? p.status !== "ended" && <button className="btn btn-secondary btn-sm" onClick={() => act(p, "stop")}>To'xtatish</button>
                           : <button className="btn btn-secondary btn-sm" onClick={() => act(p, "resume")}>Yoqish</button>}
                         {p.sales_count === 0 && (
-                          <button className="btn btn-danger btn-sm" aria-label="O'chirish" onClick={() => act(p, "delete")}>🗑</button>
+                          <button className="btn btn-danger btn-sm" aria-label="O'chirish" title="O'chirish" onClick={() => act(p, "delete")}><Icon name="trash" size={15} /></button>
                         )}
                       </div>
                     </td>

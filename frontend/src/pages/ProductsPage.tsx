@@ -7,6 +7,7 @@ import { useAuth } from "../auth/AuthContext";
 import { Empty, ErrorBox, Loading, Pagination, ProductThumb, StockBadge } from "../components/ui";
 import { money } from "../utils/format";
 import { useAsync, useDebounced } from "../utils/useAsync";
+import { Icon } from "../components/Icon";
 
 export function ProductsPage() {
   const notice = (useLocation().state as { notice?: string } | null)?.notice;
@@ -64,7 +65,7 @@ export function ProductsPage() {
                           <td colSpan={5} style={{ background: "var(--bg)" }}>
                             {isManager && (
                               <div style={{ marginBottom: 12 }}>
-                                <Link className="btn btn-secondary btn-sm" to={`/products/${p.id}/edit`}>✎ Tahrirlash</Link>
+                                <Link className="btn btn-secondary btn-sm" to={`/products/${p.id}/edit`}><Icon name="pencil" size={15} /> Tahrirlash</Link>
                               </div>
                             )}
                             {p.variants.length === 0 ? <span className="muted">Variantlar yo'q</span> : (

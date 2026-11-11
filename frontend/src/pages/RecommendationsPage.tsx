@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { api, ApiError, qs } from "../api/client";
@@ -8,12 +8,16 @@ import { Empty, ErrorBox, Field, Loading, ProductThumb, Success } from "../compo
 import { money } from "../utils/format";
 import { useAsync } from "../utils/useAsync";
 import type { PromotionPrefill } from "./PromotionsPage";
+import { Icon } from "../components/Icon";
 
-const LEVEL: Record<RiskLevel, { badge: string; icon: string }> = {
-  high: { badge: "badge-danger", icon: "🔴" },
-  medium: { badge: "badge-warn", icon: "🟠" },
-  low: { badge: "badge-neutral", icon: "🟡" },
+const LEVEL: Record<RiskLevel, { badge: string; dot: string }> = {
+  high: { badge: "badge-danger", dot: "dot-danger" },
+  medium: { badge: "badge-warn", dot: "dot-warn" },
+  low: { badge: "badge-neutral", dot: "dot-low" },
 };
+
+/** Xavf darajasi nuqtasi (yonida doim matn bo'ladi, faqat rangga tayanilmaydi). */
+const Dot = ({ cls }: { cls: string }) => <span className={`dot ${cls}`} aria-hidden="true" />;
 
 function AiCard({ branchId, configured, count }: { branchId?: number; configured: boolean; count: number }) {
   const [state, setState] = useState<{ data?: AiSummary; error?: string; loading?: boolean }>({});
@@ -32,7 +36,7 @@ function AiCard({ branchId, configured, count }: { branchId?: number; configured
   return (
     <div className="card stack">
       <div className="spread">
-        <h2 style={{ margin: 0 }}>✨ AI xulosasi</h2>
+        <h2 className="row" style={{ margin: 0, gap: 8 }}><Icon name="sparkles" /> AI xulosasi</h2>
         {configured && count > 0 && (
           <button className="btn btn-secondary btn-sm" disabled={state.loading} onClick={() => run(Boolean(state.data))}>
             {state.loading ? "Yozilmoqda..." : state.data ? "Qayta yozdirish" : "Xulosa olish"}
@@ -81,7 +85,7 @@ function RecCard({ r, onDismiss }: { r: Recommendation; onDismiss: (r: Recommend
           <div>
             <div style={{ fontWeight: 700 }}>{r.name} <span className="muted">· {r.article}</span></div>
             <div className="row" style={{ gap: 6, marginTop: 4 }}>
-              <span className={`badge ${lv.badge}`}>{lv.icon} {r.level_display}</span>
+              <span className={`badge ${lv.badge}`}><Dot cls={lv.dot} /> {r.level_display}</span>
               {r.season_name && <span className="badge badge-neutral">{r.season_name}</span>}
               {r.category_name && <span className="badge badge-neutral">{r.category_name}</span>}
             </div>
@@ -111,9 +115,9 @@ function RecCard({ r, onDismiss }: { r: Recommendation; onDismiss: (r: Recommend
 
       <div className="row">
         {r.active_promotion ? (
-          <span className="badge badge-ok">🏷 Faol aksiya bor: {r.active_promotion.label}</span>
+          <span className="badge badge-ok"><Icon name="tag" size={13} /> Faol aksiya bor: {r.active_promotion.label}</span>
         ) : r.can_promote && (
-          <button className="btn btn-primary" onClick={createPromotion}>🏷 Aksiya yaratish (−{r.discount}%)</button>
+          <button className="btn btn-primary" onClick={createPromotion}><Icon name="tag" size={16} /> Aksiya yaratish (−{r.discount}%)</button>
         )}
         <button className="btn btn-secondary" onClick={() => onDismiss(r)}>Rad etish (30 kun)</button>
       </div>
@@ -121,11 +125,11 @@ function RecCard({ r, onDismiss }: { r: Recommendation; onDismiss: (r: Recommend
   );
 }
 
-const SETTING_ROWS: { label: string; days: keyof InsightSettings; pct: keyof InsightSettings; hint: string }[] = [
-  { label: "🔴 Yuqori xavf", days: "no_sale_days", pct: "high_discount", hint: "kun bitta ham sotilmasa" },
-  { label: "🟠 O'rta xavf", days: "cover_days_medium", pct: "medium_discount", hint: "kunga yoki undan ko'pga qoldiq yetsa" },
-  { label: "🟡 Past xavf", days: "cover_days_low", pct: "low_discount", hint: "kunga yoki undan ko'pga qoldiq yetsa" },
-  { label: "🍂 Mavsum", days: "season_end_days", pct: "season_discount", hint: "kun ichida mavsum tugasa yoki tugagan bo'lsa" },
+const SETTING_ROWS: { label: ReactNode; days: keyof InsightSettings; pct: keyof InsightSettings; hint: string }[] = [
+  { label: <><Dot cls="dot-danger" /> Yuqori xavf</>, days: "no_sale_days", pct: "high_discount", hint: "kun bitta ham sotilmasa" },
+  { label: <><Dot cls="dot-warn" /> O'rta xavf</>, days: "cover_days_medium", pct: "medium_discount", hint: "kunga yoki undan ko'pga qoldiq yetsa" },
+  { label: <><Dot cls="dot-low" /> Past xavf</>, days: "cover_days_low", pct: "low_discount", hint: "kunga yoki undan ko'pga qoldiq yetsa" },
+  { label: <><Icon name="leaf" size={15} /> Mavsum</>, days: "season_end_days", pct: "season_discount", hint: "kun ichida mavsum tugasa yoki tugagan bo'lsa" },
 ];
 
 function SettingsCard({ onSaved }: { onSaved: () => void }) {
@@ -205,7 +209,7 @@ export function RecommendationsPage() {
     <div className="stack">
       <div className="spread">
         <h1 style={{ margin: 0 }}>Tavsiyalar</h1>
-        <button className="btn btn-secondary btn-sm" onClick={() => setShowSettings((s) => !s)}>⚙ Qoidalar</button>
+        <button className="btn btn-secondary btn-sm" onClick={() => setShowSettings((s) => !s)}><Icon name="sliders" size={16} /> Qoidalar</button>
       </div>
       <p className="muted" style={{ margin: 0 }}>
         Sotilmay qolish xavfi bo'lgan tovarlar va ularga tavsiya qilinadigan chegirma. Har bir tavsiyaning sababi ko'rsatilgan.
@@ -225,7 +229,7 @@ export function RecommendationsPage() {
         <>
           <div className="tiles">
             <div className="card tile"><span className="muted">Xavf ostidagi tovarlar</span><span className="tile-value">{list.data.summary.count}</span></div>
-            <div className="card tile"><span className="muted">🔴 Yuqori / 🟠 O'rta / 🟡 Past</span>
+            <div className="card tile"><span className="muted"><Dot cls="dot-danger" /> Yuqori / <Dot cls="dot-warn" /> O'rta / <Dot cls="dot-low" /> Past</span>
               <span className="tile-value">{list.data.summary.high} / {list.data.summary.medium} / {list.data.summary.low}</span></div>
             <div className="card tile"><span className="muted">Omborda muzlab turgan pul (tannarxda)</span>
               <span className="tile-value tile-warn">{money(list.data.summary.frozen_value)}</span></div>

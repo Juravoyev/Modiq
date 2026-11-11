@@ -6,10 +6,11 @@ import { useAuth } from "../auth/AuthContext";
 import { Empty, ErrorBox, Field, Loading, Pagination, Success } from "../components/ui";
 import { dateTime, money } from "../utils/format";
 import { useAsync, useDebounced } from "../utils/useAsync";
+import { Icon } from "../components/Icon";
 
 export function GroupBadge({ name, percent }: { name: string | null; percent: number }) {
   if (!name) return <span className="badge badge-neutral">Oddiy</span>;
-  return <span className="badge badge-ok">★ {name} · {percent}%</span>;
+  return <span className="badge badge-ok"><Icon name="star" size={12} /> {name} · {percent}%</span>;
 }
 
 /** Mijoz formasi. Kassada ham ishlatiladi (telefon oldindan to'ldirilgan holda). */
@@ -132,8 +133,8 @@ function GroupsCard({ groups, onChanged }: { groups: CustomerGroup[]; onChanged:
               <span className="row" style={{ gap: 6 }}>
                 <button className="btn btn-secondary btn-sm" onClick={() => {
                   setEditing(g.id); setForm({ name: g.name, discount_percent: String(g.discount_percent) });
-                }}>✎</button>
-                <button className="btn btn-danger btn-sm" aria-label="O'chirish" onClick={() => remove(g)}>🗑</button>
+                }} aria-label="Tahrirlash" title="Tahrirlash"><Icon name="pencil" size={15} /></button>
+                <button className="btn btn-danger btn-sm" aria-label="O'chirish" title="O'chirish" onClick={() => remove(g)}><Icon name="trash" size={15} /></button>
               </span>
             </div>
           ))}
@@ -245,11 +246,11 @@ export function CustomersPage() {
                     </td>
                     <td className="right num">
                       <button className="btn btn-secondary btn-sm" onClick={() => setHistory(c)} title="Bonus tarixi">
-                        🎁 {money(c.bonus_available)}
+                        <Icon name="gift" size={15} /> {money(c.bonus_available)}
                       </button>
                       {Number(c.bonus_pending) > 0 && <div className="muted">+{money(c.bonus_pending)} kutilmoqda</div>}
                     </td>
-                    <td><button className="btn btn-secondary btn-sm" onClick={() => { setEditing(c); setMessage(null); }}>✎</button></td>
+                    <td><button className="btn btn-secondary btn-sm" onClick={() => { setEditing(c); setMessage(null); }} aria-label="Tahrirlash" title="Tahrirlash"><Icon name="pencil" size={15} /></button></td>
                   </tr>
                 ))}
               </tbody>

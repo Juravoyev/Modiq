@@ -6,6 +6,7 @@ import { useAuth } from "../auth/AuthContext";
 import { Empty, ErrorBox, Field, Loading, Success, PasswordInput } from "../components/ui";
 import { useAsync } from "../utils/useAsync";
 import { Chips, toggle } from "./ProductFormPage";
+import { Icon } from "../components/Icon";
 
 const ROLES: Record<Role, string> = { owner: "Egasi", manager: "Menejer", cashier: "Sotuvchi" };
 
@@ -147,7 +148,7 @@ export function StaffPage() {
                     <td>{ROLES[m.role]}{m.role === "cashier" && m.can_approve_returns && <div className="muted">Qaytarish uchun mas'ul</div>}</td>
                     <td>{m.role === "cashier" ? (m.branch_ids.map(branchName).join(", ") || <span className="field-error">Biriktirilmagan</span>) : "Barchasi"}</td>
                     <td>{m.is_active ? <span className="badge badge-ok">● Faol</span> : <span className="badge badge-neutral">○ O'chirilgan</span>}</td>
-                    <td>{isOwner && <button className="btn btn-secondary btn-sm" onClick={() => { setEditing(m); setMessage(null); }}>✎ Tahrirlash</button>}</td>
+                    <td>{isOwner && <button className="btn btn-secondary btn-sm" onClick={() => { setEditing(m); setMessage(null); }}><Icon name="pencil" size={15} /> Tahrirlash</button>}</td>
                   </tr>
                 ))}
               </tbody>

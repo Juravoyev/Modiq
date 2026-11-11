@@ -5,6 +5,7 @@ import type { Branch, Page } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
 import { ErrorBox, Field, Loading, Success } from "../components/ui";
 import { useAsync } from "../utils/useAsync";
+import { Icon } from "../components/Icon";
 
 const KINDS: Record<Branch["kind"], string> = { store: "Do'kon", warehouse: "Ombor" };
 
@@ -103,7 +104,7 @@ export function BranchesPage() {
                   <td>{KINDS[b.kind]}</td>
                   <td>{b.address || "—"}</td>
                   <td>{b.is_active ? <span className="badge badge-ok">● Faol</span> : <span className="badge badge-neutral">○ Yopilgan</span>}</td>
-                  <td><button className="btn btn-secondary btn-sm" onClick={() => { setEditing(b); setMessage(null); }}>✎ Tahrirlash</button></td>
+                  <td><button className="btn btn-secondary btn-sm" onClick={() => { setEditing(b); setMessage(null); }}><Icon name="pencil" size={15} /> Tahrirlash</button></td>
                 </tr>
               ))}
             </tbody>

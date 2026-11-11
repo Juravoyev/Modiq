@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 
 import { useAuth } from "../auth/AuthContext";
+import { Icon } from "../components/Icon";
 import { navFor } from "../components/Layout";
 
 /** Telefonda pastki menyuga sig'magan bo'limlar. */
@@ -12,8 +13,8 @@ export function MorePage() {
       <div className="stack" style={{ gap: 8 }}>
         {navFor(isManager).map((n) => (
           <Link key={n.to} to={n.to} className="result-item" style={{ textDecoration: "none", color: "inherit" }}>
-            <span><span aria-hidden="true">{n.icon}</span> {n.label}</span>
-            <span className="muted">›</span>
+            <span className="row" style={{ gap: 10 }}><Icon name={n.icon} size={20} /> {n.label}</span>
+            <Icon name="chevron-right" className="muted" />
           </Link>
         ))}
       </div>

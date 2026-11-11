@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import type { Customer, CustomerBrief, CustomerGroup, Page } from "../api/types";
 import { CustomerForm, GroupBadge } from "../pages/CustomersPage";
 import { ErrorBox } from "./ui";
+import { Icon } from "./Icon";
 
 function brief(c: Customer): CustomerBrief {
   return { id: c.id, phone: c.phone, full_name: c.full_name, group_name: c.group_name, discount_percent: c.discount_percent };
@@ -52,10 +53,10 @@ export function CustomerPicker({ value, onChange }: { value: CustomerBrief | nul
     return (
       <div className="spread" style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "8px 10px" }}>
         <div>
-          <div style={{ fontWeight: 600 }}>👤 {value.full_name || value.phone}</div>
+          <div className="row" style={{ fontWeight: 600, gap: 6 }}><Icon name="user" size={16} /> {value.full_name || value.phone}</div>
           <div className="muted num">{value.phone} <GroupBadge name={value.group_name} percent={value.discount_percent} /></div>
         </div>
-        <button className="btn btn-secondary btn-sm" aria-label="Mijozni olib tashlash" onClick={() => onChange(null)}>✕</button>
+        <button className="btn btn-secondary btn-sm" aria-label="Mijozni olib tashlash" onClick={() => onChange(null)}><Icon name="x" size={15} /></button>
       </div>
     );
   }

@@ -8,6 +8,7 @@ import { Receipt } from "../components/Receipt";
 import { Empty, ErrorBox, Loading, ProductThumb } from "../components/ui";
 import { money, newIdempotencyKey } from "../utils/format";
 import { useAsync, useDebounced } from "../utils/useAsync";
+import { Icon } from "../components/Icon";
 
 interface CartLine { variant: Variant; quantity: number; discount: string }
 
@@ -237,7 +238,7 @@ export function PosPage() {
                       <div className="muted">{l.variant.color_name} · {l.variant.size_name}</div>
                     </div>
                     <button className="btn btn-secondary btn-sm" aria-label="O'chirish"
-                            onClick={() => changeCart(cart.filter((x) => x.variant.id !== l.variant.id))}>✕</button>
+                            onClick={() => changeCart(cart.filter((x) => x.variant.id !== l.variant.id))}><Icon name="x" size={15} /></button>
                   </div>
                   <div className="spread">
                     <div className="qty">
@@ -253,7 +254,7 @@ export function PosPage() {
                   </div>
                   {ql && Number(ql.auto_discount) > 0 && (
                     <span className="badge badge-ok" style={{ alignSelf: "flex-start", whiteSpace: "normal" }}>
-                      🏷 {ql.discount_label}: −{money(ql.auto_discount)}
+                      <Icon name="tag" size={13} /> {ql.discount_label}: −{money(ql.auto_discount)}
                     </span>
                   )}
                   <input className={`input ${bad ? "invalid" : ""}`} inputMode="decimal" placeholder={!isManager && fresh?.data
@@ -272,7 +273,7 @@ export function PosPage() {
         {customer && bonusInfo?.enabled && (
           <div className="stack" style={{ gap: 6 }}>
             <div className="spread">
-              <span>🎁 Bonus: <b className="num">{money(bonusInfo.available)}</b></span>
+              <span className="row" style={{ gap: 6 }}><Icon name="gift" size={16} /> Bonus: <b className="num">{money(bonusInfo.available)}</b></span>
               {Number(bonusInfo.pending) > 0 && (
                 <span className="muted">+{money(bonusInfo.pending)} 24 soatdan keyin</span>
               )}

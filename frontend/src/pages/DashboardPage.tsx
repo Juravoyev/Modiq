@@ -6,6 +6,7 @@ import { useAuth } from "../auth/AuthContext";
 import { Empty, ErrorBox, Loading } from "../components/ui";
 import { money } from "../utils/format";
 import { useAsync } from "../utils/useAsync";
+import { Icon } from "../components/Icon";
 
 interface Dashboard {
   days: number;
@@ -105,7 +106,7 @@ export function DashboardPage() {
         <>
           {data.pending_returns > 0 && (
             <Link to="/returns" className="alert alert-warn" style={{ textDecoration: "none" }}>
-              <span aria-hidden="true">◷</span> {data.pending_returns} ta qaytarish so'rovi tasdiqni kutmoqda ›
+              <Icon name="clock" className="alert-icon" /> {data.pending_returns} ta qaytarish so'rovi tasdiqni kutmoqda <Icon name="chevron-right" size={16} />
             </Link>
           )}
 
@@ -167,7 +168,7 @@ export function DashboardPage() {
               <h2 style={{ margin: 0 }}>Sotilmay turgan tovarlar</h2>
               <span className="muted">Qoldig'i bor, lekin oxirgi {data.days} kunda bitta ham sotilmagan. Aksiya yoki chegirma uchun nomzodlar.</span>
             </div>
-            <div><Link className="btn btn-primary btn-sm" to="/insights">💡 Tavsiyalar: qaysi tovarga necha foiz chegirma</Link></div>
+            <div><Link className="btn btn-primary btn-sm" to="/insights"><Icon name="bulb" size={16} /> Tavsiyalar: qaysi tovarga necha foiz chegirma</Link></div>
             {!data.slow_movers.length ? <span className="muted">Bunday tovar yo'q, hammasi sotilyapti.</span> : (
               <table className="table">
                 <thead><tr><th>Tovar</th><th className="right">Qoldiq</th><th className="right">Tannarxda qiymati</th><th /></tr></thead>

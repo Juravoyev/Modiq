@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import { api, apiStream, ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import { Icon, type IconName } from "./Icon";
 
 interface Topic { id: string; icon: string; title: string; subtitle: string; body: string; page: string | null; link: string | null }
 interface Message { role: "user" | "assistant"; text: string; topic?: Topic; error?: boolean; pending?: boolean }
@@ -24,6 +25,13 @@ function Rich({ text }: { text: string }) {
   );
 }
 
+/** Backend mavzu belgisini (emoji) ilova ikonkasiga moslaydi. */
+const TOPIC_ICONS: Record<string, IconName> = {
+  "🧾": "cart", "🏷": "tag", "👤": "user", "🎁": "gift", "↩": "undo", "📦": "box", "📈": "receipt", "🏬": "store",
+  "✅": "check-circle", "👕": "shirt", "✎": "pencil", "📥": "inbox", "🔁": "transfer", "💡": "bulb", "📊": "chart",
+  "⚙": "sliders", "★": "star", "👥": "users",
+};
+
 function Bubble({ m, onLink }: { m: Message; onLink: (page: string) => void }) {
   if (m.role === "user") return <div className="assistant-msg user">{m.text}</div>;
   return (
@@ -31,7 +39,7 @@ function Bubble({ m, onLink }: { m: Message; onLink: (page: string) => void }) {
       {m.pending && !m.text ? <span className="assistant-typing" aria-label="Yozilmoqda"><i /><i /><i /></span> : <Rich text={m.text} />}
       {m.topic?.page && m.topic.link && (
         <div style={{ marginTop: 10 }}>
-          <button className="btn btn-secondary btn-sm" onClick={() => onLink(m.topic!.page!)}>{m.topic.link} →</button>
+          <button className="btn btn-secondary btn-sm" onClick={() => onLink(m.topic!.page!)}>{m.topic.link} <Icon name="arrow-right" size={15} /></button>
         </div>
       )}
     </div>
@@ -103,7 +111,7 @@ export function Assistant({ open, onClose }: { open: boolean; onClose: () => voi
     } catch (err) {
       if ((err as Error).name === "AbortError") return;
       const msg = err instanceof ApiError ? err.message : "Javob olinmadi. Qayta urinib ko'ring.";
-      update(() => ({ role: "assistant", text: `${msg}\n\nPastdagi ☷ tugmasi orqali tayyor mavzulardan foydalanishingiz mumkin.`, error: true }));
+      update(() => ({ role: "assistant", text: `${msg}\n\nPastdagi mavzular tugmasi orqali tayyor mavzulardan foydalanishingiz mumkin.`, error: true }));
     } finally {
       setBusy(false);
       inputRef.current?.focus();
@@ -129,7 +137,7 @@ export function Assistant({ open, onClose }: { open: boolean; onClose: () => voi
   if (messages.length === 0) {
     body = (
       <div className="assistant-home">
-        <div className="assistant-logo" aria-hidden="true">✨</div>
+        <div className="assistant-logo" aria-hidden="true"><Icon name="sparkles" size={26} /></div>
         <h2 style={{ margin: "8px 0 4px" }}>Xush kelibsiz!</h2>
         <p className="muted" style={{ margin: "0 0 16px", textAlign: "center" }}>
           Dasturdan qanday foydalanishni o'rgataman. Mavzuni tanlang yoki savolingizni yozing.
@@ -138,7 +146,7 @@ export function Assistant({ open, onClose }: { open: boolean; onClose: () => voi
           <div className="assistant-topics">
             {topics.map((t) => (
               <button key={t.id} className="assistant-topic" onClick={() => showTopic(t)}>
-                <span className="assistant-topic-icon" aria-hidden="true">{t.icon}</span>
+                <span className="assistant-topic-icon" aria-hidden="true">{TOPIC_ICONS[t.icon] ? <Icon name={TOPIC_ICONS[t.icon]} /> : t.icon}</span>
                 <span>
                   <span className="assistant-topic-title">{t.title}</span>
                   <span className="muted">{t.subtitle}</span>
@@ -158,8 +166,8 @@ export function Assistant({ open, onClose }: { open: boolean; onClose: () => voi
       <div className="assistant-backdrop" onClick={onClose} aria-hidden="true" />
       <aside className="assistant-panel" role="dialog" aria-label="Yordamchi">
         <header className="assistant-head">
-          <b>✨ Yordamchi</b>
-          <button className="btn btn-secondary btn-sm" onClick={onClose} aria-label="Yopish">✕</button>
+          <b className="row" style={{ gap: 8 }}><Icon name="sparkles" /> Yordamchi</b>
+          <button className="btn btn-secondary btn-sm" onClick={onClose} aria-label="Yopish"><Icon name="x" size={16} /></button>
         </header>
         <div className="assistant-body" ref={listRef}>{body}</div>
         <form className="assistant-input" onSubmit={ask}>
@@ -172,11 +180,11 @@ export function Assistant({ open, onClose }: { open: boolean; onClose: () => voi
           <div className="spread">
             <div className="row" style={{ gap: 6 }}>
               <button type="button" className="btn btn-secondary btn-sm" onClick={home} title="Tayyor mavzular"
-                      aria-label="Tayyor mavzular">☷</button>
-              <span className="badge badge-neutral">{aiReady ? "✨ Gemini" : "Faqat tayyor mavzular"}</span>
+                      aria-label="Tayyor mavzular"><Icon name="grid" size={16} /></button>
+              <span className="badge badge-neutral">{aiReady ? "Gemini" : "Faqat tayyor mavzular"}</span>
             </div>
             <button className="btn btn-primary btn-sm" disabled={!aiReady || busy || !input.trim()} aria-label="Yuborish">
-              {busy ? "…" : "Yuborish ➤"}
+              {busy ? "…" : <>Yuborish <Icon name="send" size={15} /></>}
             </button>
           </div>
           <span className="muted" style={{ fontSize: 11 }}>

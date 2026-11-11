@@ -6,6 +6,7 @@ import { useAuth } from "../auth/AuthContext";
 import { Empty, ErrorBox, Field, Loading, Pagination, Success } from "../components/ui";
 import { dateTime } from "../utils/format";
 import { useAsync, useDebounced } from "../utils/useAsync";
+import { Icon } from "../components/Icon";
 
 const STATUS: Record<TransferStatus, { label: string; cls: string; icon: string }> = {
   draft: { label: "Qoralama", cls: "badge-neutral", icon: "○" },
@@ -109,7 +110,7 @@ function NewTransfer({ branches, onSaved }: { branches: Branch[]; onSaved: (t: T
                              ? { ...x, quantity: Math.max(1, Number(e.target.value.replace(/\D/g, "")) || 1) } : x)))} />
                   </td>
                   <td><button className="btn btn-secondary btn-sm" aria-label="O'chirish"
-                              onClick={() => setLines(lines.filter((x) => x.variant !== l.variant))}>✕</button></td>
+                              onClick={() => setLines(lines.filter((x) => x.variant !== l.variant))}><Icon name="x" size={15} /></button></td>
                 </tr>
               ))}
             </tbody>

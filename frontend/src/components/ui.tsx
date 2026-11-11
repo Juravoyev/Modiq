@@ -14,7 +14,7 @@ export function Loading({ text = "Yuklanmoqda..." }: { text?: string }) {
 export function Empty({ title, hint, action }: { title: string; hint?: string; action?: ReactNode }) {
   return (
     <div className="state">
-      <div style={{ fontSize: 28 }} aria-hidden="true">📦</div>
+      <div className="state-icon"><Icon name="box" size={26} /></div>
       <div style={{ fontWeight: 600, color: "var(--text)" }}>{title}</div>
       {hint && <div className="muted" style={{ marginTop: 4 }}>{hint}</div>}
       {action && <div style={{ marginTop: 12 }}>{action}</div>}
@@ -25,7 +25,7 @@ export function Empty({ title, hint, action }: { title: string; hint?: string; a
 export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
     <div className="alert alert-error" role="alert">
-      <span aria-hidden="true">⚠</span>
+      <Icon name="alert" className="alert-icon" />
       <div style={{ flex: 1 }}>{message}</div>
       {onRetry && <button className="btn btn-secondary btn-sm" onClick={onRetry}>Qayta urinish</button>}
     </div>
@@ -35,7 +35,7 @@ export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () =
 export function Success({ children }: { children: ReactNode }) {
   return (
     <div className="alert alert-success" role="status">
-      <span aria-hidden="true">✓</span>
+      <Icon name="check-circle" className="alert-icon" />
       <div>{children}</div>
     </div>
   );
@@ -80,7 +80,7 @@ export function StockBadge({ quantity, min }: { quantity: number; min: number })
 export function ProductThumb({ src, size = 40, alt = "" }: { src: string | null | undefined; size?: number; alt?: string }) {
   return src
     ? <img className="thumb" src={src} alt={alt} width={size} height={size} loading="lazy" />
-    : <span className="thumb thumb-empty" style={{ width: size, height: size }} aria-hidden="true">👕</span>;
+    : <span className="thumb thumb-empty" style={{ width: size, height: size }} aria-hidden="true"><Icon name="shirt" size={Math.round(size * 0.45)} /></span>;
 }
 
 /** Parol maydoni: ko'z tugmasi parolni ko'rsatadi yoki yashiradi. */

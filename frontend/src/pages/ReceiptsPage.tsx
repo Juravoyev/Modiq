@@ -6,6 +6,7 @@ import { useAuth } from "../auth/AuthContext";
 import { Empty, ErrorBox, Field, Loading, Pagination, Success } from "../components/ui";
 import { dateTime, money } from "../utils/format";
 import { useAsync, useDebounced } from "../utils/useAsync";
+import { Icon } from "../components/Icon";
 
 interface ReceiptLine { id?: number; variant: number; sku: string; variant_name: string; quantity: number; purchase_price: string }
 interface Receipt {
@@ -113,7 +114,7 @@ function NewReceipt({ onSaved }: { onSaved: (r: Receipt) => void }) {
                   </td>
                   <td className="right num">{money(l.quantity * Number(l.purchase_price || 0))}</td>
                   <td><button className="btn btn-secondary btn-sm" aria-label="O'chirish"
-                              onClick={() => setLines(lines.filter((x) => x.variant !== l.variant))}>✕</button></td>
+                              onClick={() => setLines(lines.filter((x) => x.variant !== l.variant))}><Icon name="x" size={15} /></button></td>
                 </tr>
               ))}
             </tbody>
