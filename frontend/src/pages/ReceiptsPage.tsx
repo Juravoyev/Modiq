@@ -70,7 +70,7 @@ function NewReceipt({ onSaved }: { onSaved: (r: Receipt) => void }) {
 
   return (
     <div className="card stack">
-      <h2 style={{ margin: 0 }}>Yangi kirim · {branch?.name}</h2>
+      <h2>Yangi kirim · {branch?.name}</h2>
       {error && <ErrorBox message={error} />}
       <div className="grid-2">
         <Field label="Yetkazib beruvchi" error={fields.supplier_name}>
@@ -87,7 +87,7 @@ function NewReceipt({ onSaved }: { onSaved: (r: Receipt) => void }) {
         <input className="input" type="search" placeholder="SKU yoki tovar nomi" value={query} onChange={(e) => setQuery(e.target.value)} />
       </Field>
       {search && (results.loading ? <Loading text="Qidirilmoqda..." /> : (
-        <div className="stack" style={{ gap: 6 }}>
+        <div className="stack gap-2">
           {results.data?.results.map((v) => (
             <button key={v.id} className="result-item" onClick={() => add(v)}>
               <span>{v.product_name} · {v.color_name} · {v.size_name}</span><span className="muted">{v.sku}</span>
@@ -128,7 +128,7 @@ function NewReceipt({ onSaved }: { onSaved: (r: Receipt) => void }) {
           <button className="btn btn-primary" disabled={busy || !lines.length} onClick={() => save(true)}>Saqlash va tasdiqlash</button>
         </div>
       </div>
-      <p className="muted" style={{ margin: 0 }}>Qoldiq faqat kirim tasdiqlanganda oshadi. Tasdiqlangan kirimni o'zgartirib bo'lmaydi.</p>
+      <p className="muted">Qoldiq faqat kirim tasdiqlanganda oshadi. Tasdiqlangan kirimni o'zgartirib bo'lmaydi.</p>
     </div>
   );
 }
@@ -155,7 +155,7 @@ export function ReceiptsPage() {
   return (
     <div className="stack">
       <div className="spread">
-        <h1 style={{ margin: 0 }}>Kirim</h1>
+        <h1>Kirim</h1>
         {isManager && !creating && <button className="btn btn-primary" onClick={() => { setCreating(true); setMessage(null); }}>+ Yangi kirim</button>}
       </div>
       {!isManager && <div className="alert alert-warn">Kirimni faqat menejer yoki do'kon egasi kiritadi.</div>}
@@ -168,8 +168,8 @@ export function ReceiptsPage() {
           list.reload();
         }} />
       )}
-      <div className="card" style={{ padding: 0 }}>
-        {list.loading ? <Loading /> : list.error ? <div style={{ padding: 16 }}><ErrorBox message={list.error} onRetry={list.reload} /></div> :
+      <div className="card flush">
+        {list.loading ? <Loading /> : list.error ? <div className="pad"><ErrorBox message={list.error} onRetry={list.reload} /></div> :
           !list.data?.results.length ? <Empty title="Hali kirim yo'q" hint="Yetkazib beruvchidan kelgan tovarni shu yerda kiriting." /> : (
             <div className="table-wrap">
               <table className="table">

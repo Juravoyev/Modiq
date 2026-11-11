@@ -4,8 +4,8 @@ import { dateTime, money } from "../utils/format";
 /** Savdo cheki (chop etish mumkin). */
 export function Receipt({ sale, businessName }: { sale: Sale; businessName: string }) {
   return (
-    <div className="receipt stack" style={{ gap: 8 }}>
-      <div style={{ textAlign: "center" }}>
+    <div className="receipt stack gap-2">
+      <div className="center">
         <h2 style={{ marginBottom: 2 }}>{businessName}</h2>
         <div className="muted">{sale.branch_name}</div>
         <div className="muted">Chek № {sale.id} · {dateTime(sale.created_at)}</div>

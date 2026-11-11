@@ -65,7 +65,7 @@ function VariantRow({ v, onSaved, onRemoved }: { v: Variant; onSaved: (v: Varian
       </td>
       <td className="right num">{v.stock ?? 0}<div><StockBadge quantity={v.stock ?? 0} min={v.effective_min_stock} /></div></td>
       <td>
-        <div className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+        <div className="row gap-2 nowrap">
           {dirty && <button className="btn btn-primary btn-sm" disabled={busy} onClick={save}>Saqlash</button>}
           {v.is_active
             ? <button className="btn btn-secondary btn-sm" disabled={busy} onClick={remove}>O'chirish</button>
@@ -217,7 +217,7 @@ function ProductEditor({ initial, refs, onReload, onDeleted }: {
       {error && <ErrorBox message={error} />}
 
       <form className="card stack" onSubmit={save}>
-        <h2 style={{ margin: 0 }}>Asosiy ma'lumotlar</h2>
+        <h2>Asosiy ma'lumotlar</h2>
         <div className="grid-2">
           <Field label="Tovar nomi *" error={fields.name}>
             <input className="input" value={form.name} onChange={set("name")} required />
@@ -258,14 +258,14 @@ function ProductEditor({ initial, refs, onReload, onDeleted }: {
       </form>
 
       <div className="card stack">
-        <h2 style={{ margin: 0 }}>Rasm</h2>
+        <h2>Rasm</h2>
         <ImagePicker key={product.image ?? "none"} current={product.image} busy={busy}
                      onPick={(f) => void image("POST", f)} onRemove={() => void image("DELETE")} />
         <span className="muted">Rasm darhol saqlanadi va avtomatik siqiladi.</span>
       </div>
 
       <div className="card stack">
-        <h2 style={{ margin: 0 }}>Variantlar</h2>
+        <h2>Variantlar</h2>
         {product.variants.length === 0 ? <span className="muted">Variantlar yo'q. Quyida rang va o'lcham tanlab qo'shing.</span> : (
           <div className="table-wrap">
             <table className="table">
@@ -280,7 +280,7 @@ function ProductEditor({ initial, refs, onReload, onDeleted }: {
             </table>
           </div>
         )}
-        <p className="muted" style={{ margin: 0 }}>Alohida narx bo'sh bo'lsa, tovarning umumiy sotuv narxi ishlatiladi.</p>
+        <p className="muted">Alohida narx bo'sh bo'lsa, tovarning umumiy sotuv narxi ishlatiladi.</p>
 
         <h3 style={{ margin: "8px 0 0" }}>Yangi variantlar qo'shish</h3>
         <span className="field-label">Ranglar</span>
@@ -294,7 +294,7 @@ function ProductEditor({ initial, refs, onReload, onDeleted }: {
             {colorIds.length && sizeIds.length ? `${colorIds.length * sizeIds.length} ta kombinatsiyani qo'shish` : "Rang va o'lcham tanlang"}
           </button>
         </div>
-        <p className="muted" style={{ margin: 0 }}>Mavjud kombinatsiyalar takror yaratilmaydi.</p>
+        <p className="muted">Mavjud kombinatsiyalar takror yaratilmaydi.</p>
       </div>
     </div>
   );

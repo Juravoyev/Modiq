@@ -109,7 +109,7 @@ function ProductPicker({ value, onChange, error }: {
   const chosen = new Set(value.map((p) => p.id));
   return (
     <Field label="Tovarlar *" error={error}>
-      <div className="row" style={{ gap: 6 }}>
+      <div className="row gap-2">
         {value.map((p) => (
           <span key={p.id} className="badge badge-ok">
             {p.name}
@@ -121,7 +121,7 @@ function ProductPicker({ value, onChange, error }: {
       <input className="input" type="search" placeholder="Tovar nomi yoki artikul" value={query}
              onChange={(e) => setQuery(e.target.value)} />
       {search && results.data && (
-        <div className="stack" style={{ gap: 4 }}>
+        <div className="stack gap-1">
           {results.data.results.length === 0 && <span className="muted">Topilmadi</span>}
           {results.data.results.filter((p) => !chosen.has(p.id)).map((p) => (
             <button type="button" key={p.id} className="result-item" style={{ padding: "6px 10px" }}
@@ -193,9 +193,9 @@ function PromotionForm({ promo, prefill, onSaved, onCancel }: {
 
   return (
     <form className="card stack" onSubmit={submit}>
-      <h2 style={{ margin: 0 }}>{promo ? `Tahrirlash: ${promo.name}` : prefill ? "Tavsiya bo'yicha aksiya" : "Yangi aksiya"}</h2>
+      <h2>{promo ? `Tahrirlash: ${promo.name}` : prefill ? "Tavsiya bo'yicha aksiya" : "Yangi aksiya"}</h2>
       {prefill && (
-        <p className="muted" style={{ margin: 0 }}>
+        <p className="muted">
           Tovar va chegirma tavsiyadan olindi. Muddatni tekshirib, saqlang. Natijasi shu sahifada ko'rinadi.
         </p>
       )}
@@ -249,7 +249,7 @@ function PromotionForm({ promo, prefill, onSaved, onCancel }: {
       {form.scope === "products" && (
         <ProductPicker value={form.products} onChange={(v) => set("products", v)} error={fields.products} />
       )}
-      <p className="muted" style={{ margin: 0 }}>
+      <p className="muted">
         Bir tovarga bir nechta aksiya to'g'ri kelsa, mijoz uchun eng foydalisi qo'llanadi. Aksiya narxni hech qachon
         tannarxdan pastga tushirmaydi.
       </p>
@@ -306,7 +306,7 @@ function SettingsCard() {
 
   return (
     <form className="card stack" onSubmit={save}>
-      <h2 style={{ margin: 0 }}>Chegirma va bonus sozlamalari</h2>
+      <h2>Chegirma va bonus sozlamalari</h2>
       {msg && <Success>{msg}</Success>}
       {error && <ErrorBox message={error} />}
       <div className="grid-2">
@@ -370,7 +370,7 @@ export function PromotionsPage() {
   return (
     <div className="stack">
       <div className="spread">
-        <h1 style={{ margin: 0 }}>Aksiyalar</h1>
+        <h1>Aksiyalar</h1>
         {!editing && <button className="btn btn-primary" onClick={() => { setEditing("new"); setMessage(null); }}>+ Yangi aksiya</button>}
       </div>
       {message && <Success>{message}</Success>}
@@ -396,7 +396,7 @@ export function PromotionsPage() {
       ) : list.data.length === 0 ? (
         <Empty title="Aksiya yo'q" hint="Yangi aksiya yarating: mavsum, kategoriya yoki tanlangan tovarlarga." />
       ) : (
-        <div className="card" style={{ padding: 0 }}>
+        <div className="card flush">
           <div className="table-wrap">
             <table className="table">
               <thead>
@@ -410,7 +410,7 @@ export function PromotionsPage() {
                       {p.source === "recommendation" && <div><span className="badge badge-neutral"><Icon name="bulb" size={12} /> Tavsiyadan</span></div>}
                     </td>
                     <td>{scopeText(p)}</td>
-                    <td className="num" style={{ whiteSpace: "nowrap" }}>{day(p.starts_on)} – {day(p.ends_on)}</td>
+                    <td className="num nowrap">{day(p.starts_on)} – {day(p.ends_on)}</td>
                     <td><span className={`badge ${STATUS_BADGE[p.status]}`}>{p.status_display}</span></td>
                     <td className="right num">
                       {p.effect && (
@@ -424,7 +424,7 @@ export function PromotionsPage() {
                       ) : !p.effect && <span className="muted">Hali boshlanmagan</span>}
                     </td>
                     <td>
-                      <div className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+                      <div className="row gap-2 nowrap">
                         <button className="btn btn-secondary btn-sm" onClick={() => { setEditing(p); setMessage(null); }} aria-label="Tahrirlash" title="Tahrirlash"><Icon name="pencil" size={15} /></button>
                         {p.is_active
                           ? p.status !== "ended" && <button className="btn btn-secondary btn-sm" onClick={() => act(p, "stop")}>To'xtatish</button>

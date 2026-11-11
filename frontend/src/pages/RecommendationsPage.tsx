@@ -36,7 +36,7 @@ function AiCard({ branchId, configured, count }: { branchId?: number; configured
   return (
     <div className="card stack">
       <div className="spread">
-        <h2 className="row" style={{ margin: 0, gap: 8 }}><Icon name="sparkles" /> AI xulosasi</h2>
+        <h2 className="row gap-2"><Icon name="sparkles" /> AI xulosasi</h2>
         {configured && count > 0 && (
           <button className="btn btn-secondary btn-sm" disabled={state.loading} onClick={() => run(Boolean(state.data))}>
             {state.loading ? "Yozilmoqda..." : state.data ? "Qayta yozdirish" : "Xulosa olish"}
@@ -44,19 +44,19 @@ function AiCard({ branchId, configured, count }: { branchId?: number; configured
         )}
       </div>
       {!configured ? (
-        <p className="muted" style={{ margin: 0 }}>
+        <p className="muted">
           AI xulosasi sozlanmagan. Tavsiyalar baribir to'liq ishlaydi: ularni quyidagi qoidalar chiqaradi.
         </p>
       ) : state.error ? <ErrorBox message={state.error} onRetry={() => run()} /> : state.data ? (
         <>
-          <p style={{ margin: 0, whiteSpace: "pre-line", lineHeight: 1.55 }}>{state.data.text}</p>
+          <p style={{ whiteSpace: "pre-line", lineHeight: 1.55 }}>{state.data.text}</p>
           <span className="muted">
             Gemini tayyor ro'yxatni umumlashtirdi. Qaysi tovar va necha foiz ekanini qoidalar hisoblagan, AI ularni
             o'zgartirmaydi.
           </span>
         </>
       ) : (
-        <p className="muted" style={{ margin: 0 }}>
+        <p className="muted">
           Gemini quyidagi ro'yxatni o'qib, qaysi tovarlarga birinchi navbatda e'tibor berish kerakligini qisqa yozib beradi.
           Unga faqat tovar nomlari va raqamlar yuboriladi.
         </p>
@@ -78,20 +78,20 @@ function RecCard({ r, onDismiss }: { r: Recommendation; onDismiss: (r: Recommend
   }
 
   return (
-    <div className="card stack" style={{ gap: 10 }}>
+    <div className="card stack gap-3">
       <div className="spread" style={{ alignItems: "flex-start" }}>
-        <div className="row" style={{ gap: 10, flexWrap: "nowrap" }}>
+        <div className="row gap-3 nowrap">
           <ProductThumb src={r.image} size={48} />
           <div>
             <div style={{ fontWeight: 700 }}>{r.name} <span className="muted">· {r.article}</span></div>
-            <div className="row" style={{ gap: 6, marginTop: 4 }}>
+            <div className="row gap-2 mt-1">
               <span className={`badge ${lv.badge}`}><Dot cls={lv.dot} /> {r.level_display}</span>
               {r.season_name && <span className="badge badge-neutral">{r.season_name}</span>}
               {r.category_name && <span className="badge badge-neutral">{r.category_name}</span>}
             </div>
           </div>
         </div>
-        <div style={{ textAlign: "right" }}>
+        <div className="right">
           {r.discount > 0
             ? <div className="tile-value">−{r.discount}%</div>
             : <div className="muted">Chegirma imkoni yo'q</div>}
@@ -106,7 +106,7 @@ function RecCard({ r, onDismiss }: { r: Recommendation; onDismiss: (r: Recommend
         </ul>
       </div>
 
-      <div className="row muted num" style={{ gap: 16 }}>
+      <div className="row muted num gap-4">
         <span>Qoldiq: {r.units} dona</span>
         <span>30 kunda sotildi: {r.sold_30} dona</span>
         <span>Tannarxda: {money(r.value_cost)}</span>
@@ -164,11 +164,11 @@ function SettingsCard({ onSaved }: { onSaved: () => void }) {
 
   return (
     <form className="card stack" onSubmit={save}>
-      <h2 style={{ margin: 0 }}>Qoidalar</h2>
+      <h2>Qoidalar</h2>
       {msg && <Success>{msg}</Success>}
       {error && <ErrorBox message={error} />}
       {SETTING_ROWS.map((row) => (
-        <div key={row.days} className="row" style={{ gap: 8 }}>
+        <div key={row.days} className="row gap-2">
           <span style={{ minWidth: 120, fontWeight: 600 }}>{row.label}</span>
           {input(row.days)} <span className="muted">{row.hint} →</span> {input(row.pct)} <span className="muted">% chegirma</span>
           {(fields[row.days] || fields[row.pct]) && <span className="field-error">{fields[row.days] || fields[row.pct]}</span>}
@@ -177,7 +177,7 @@ function SettingsCard({ onSaved }: { onSaved: () => void }) {
       <Field label="Yangi kelgan tovar necha kun baholanmaydi" error={fields.min_age_days}>
         <div>{input("min_age_days")}</div>
       </Field>
-      <p className="muted" style={{ margin: 0 }}>
+      <p className="muted">
         Bir nechta qoida to'g'ri kelsa, eng katta chegirma olinadi. Chegirma narxni tannarxdan pastga tushirmaydi.
       </p>
       <div><button className="btn btn-primary" disabled={form === null}>Saqlash</button></div>
@@ -208,10 +208,10 @@ export function RecommendationsPage() {
   return (
     <div className="stack">
       <div className="spread">
-        <h1 style={{ margin: 0 }}>Tavsiyalar</h1>
+        <h1>Tavsiyalar</h1>
         <button className="btn btn-secondary btn-sm" onClick={() => setShowSettings((s) => !s)}><Icon name="sliders" size={16} /> Qoidalar</button>
       </div>
-      <p className="muted" style={{ margin: 0 }}>
+      <p className="muted">
         Sotilmay qolish xavfi bo'lgan tovarlar va ularga tavsiya qilinadigan chegirma. Har bir tavsiyaning sababi ko'rsatilgan.
       </p>
       {multi && (

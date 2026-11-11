@@ -49,7 +49,7 @@ export function Layout() {
 
       <div className="main">
         <header className="topbar">
-          <div className="row" style={{ gap: 8 }}>
+          <div className="row gap-2">
             <span style={{ fontWeight: 700, color: "var(--green-dark)" }}>{me?.business.name}</span>
             {branches.length > 1 ? (
               <select
@@ -63,7 +63,7 @@ export function Layout() {
               <span className="muted">{branch?.name}</span>
             )}
           </div>
-          <div className="row" style={{ gap: 8 }}>
+          <div className="row gap-2">
             <button className="btn btn-secondary btn-sm" onClick={() => setHelpOpen(true)} aria-haspopup="dialog">
               <Icon name="sparkles" size={16} /> Yordamchi
             </button>

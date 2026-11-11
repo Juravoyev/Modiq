@@ -53,7 +53,7 @@ function MemberForm({ member, branches, onSaved, onCancel }: {
 
   return (
     <form className="card stack" onSubmit={submit}>
-      <h2 style={{ margin: 0 }}>{member ? `Tahrirlash: ${member.full_name || member.phone}` : "Yangi xodim"}</h2>
+      <h2>{member ? `Tahrirlash: ${member.full_name || member.phone}` : "Yangi xodim"}</h2>
       {error && <ErrorBox message={error} />}
       <div className="grid-2">
         <Field label="Telefon *" error={fields.phone}>
@@ -84,15 +84,15 @@ function MemberForm({ member, branches, onSaved, onCancel }: {
         </Field>
       )}
       {form.role === "cashier" && (
-        <label className="row" style={{ gap: 8 }}>
+        <label className="row gap-2">
           <input type="checkbox" checked={form.can_approve_returns}
                  onChange={(e) => setForm({ ...form, can_approve_returns: e.target.checked })} />
           Yaroqsiz tovar qaytarilishini tasdiqlay oladi (mas'ul shaxs)
         </label>
       )}
-      {form.role !== "cashier" && <p className="muted" style={{ margin: 0 }}>Menejer barcha filiallarni ko'radi, tannarx va foydani ham ko'radi, qaytarishni tasdiqlaydi.</p>}
+      {form.role !== "cashier" && <p className="muted">Menejer barcha filiallarni ko'radi, tannarx va foydani ham ko'radi, qaytarishni tasdiqlaydi.</p>}
       {member && !isOwnerRow && (
-        <label className="row" style={{ gap: 8 }}>
+        <label className="row gap-2">
           <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} />
           Faol (o'chirilsa, xodim tizimga kira olmaydi)
         </label>
@@ -125,7 +125,7 @@ export function StaffPage() {
   return (
     <div className="stack">
       <div className="spread">
-        <h1 style={{ margin: 0 }}>Xodimlar</h1>
+        <h1>Xodimlar</h1>
         {isOwner && !editing && <button className="btn btn-primary" onClick={() => { setEditing("new"); setMessage(null); }}>+ Yangi xodim</button>}
       </div>
       {!isOwner && <div className="alert alert-warn">Xodimlarni faqat do'kon egasi qo'shadi va o'zgartiradi.</div>}
@@ -135,7 +135,7 @@ export function StaffPage() {
                     onCancel={() => setEditing(null)}
                     onSaved={(msg) => { setEditing(null); setMessage(msg); data.reload(); }} />
       )}
-      <div className="card" style={{ padding: 0 }}>
+      <div className="card flush">
         {!members.length ? <Empty title="Xodim yo'q" /> : (
           <div className="table-wrap">
             <table className="table">

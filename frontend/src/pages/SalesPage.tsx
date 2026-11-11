@@ -59,8 +59,8 @@ export function SalesPage() {
   return (
     <div className="stack">
       <h1>Savdolar · {branch?.name}</h1>
-      <div className="card" style={{ padding: 0 }}>
-        {loading ? <Loading /> : error ? <div style={{ padding: 16 }}><ErrorBox message={error} onRetry={reload} /></div> :
+      <div className="card flush">
+        {loading ? <Loading /> : error ? <div className="pad"><ErrorBox message={error} onRetry={reload} /></div> :
           !data?.results.length ? <Empty title="Hali savdo yo'q" hint="Kassa sahifasida birinchi savdoni qiling." /> : (
             <div className="table-wrap">
               <table className="table">
@@ -72,7 +72,7 @@ export function SalesPage() {
                 </thead>
                 <tbody>
                   {data.results.map((s) => (
-                    <tr key={s.id} style={{ cursor: "pointer" }} onClick={() => setSelected(s)}>
+                    <tr key={s.id} className="clickable" onClick={() => setSelected(s)}>
                       <td>№ {s.id}</td>
                       <td>{dateTime(s.created_at)}</td>
                       <td>{s.cashier_name || "—"}</td>

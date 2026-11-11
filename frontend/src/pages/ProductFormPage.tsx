@@ -9,7 +9,7 @@ import { useAsync } from "../utils/useAsync";
 
 export function Chips<T extends NamedRef>({ items, selected, onToggle }: { items: T[]; selected: number[]; onToggle: (id: number) => void }) {
   return (
-    <div className="row" style={{ gap: 8 }}>
+    <div className="row gap-2">
       {items.map((i) => (
         <button type="button" key={i.id} className={`chip ${selected.includes(i.id) ? "on" : ""}`}
                 aria-pressed={selected.includes(i.id)} onClick={() => onToggle(i.id)}>
@@ -34,8 +34,8 @@ export function QuickAdd({ placeholder, onAdd }: { placeholder: string; onAdd: (
     }
   }
   return (
-    <div className="stack" style={{ gap: 4 }}>
-      <div className="row" style={{ gap: 8, flexWrap: "nowrap" }}>
+    <div className="stack gap-1">
+      <div className="row gap-2 nowrap">
         <input className="input" placeholder={placeholder} value={value} onChange={(e) => setValue(e.target.value)}
                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void add(); } }} />
         <button type="button" className="btn btn-secondary" onClick={add}>Qo'shish</button>
@@ -170,14 +170,14 @@ export function ProductFormPage() {
       </div>
 
       <div className="card stack">
-        <h2 style={{ margin: 0 }}>Ranglar</h2>
+        <h2>Ranglar</h2>
         <Chips items={r.colors} selected={colorIds} onToggle={(id) => setColorIds(toggle(colorIds, id))} />
         <QuickAdd placeholder="Yangi rang, masalan: Qora" onAdd={(n) => addRef("colors", n)} />
         <h2 style={{ margin: "8px 0 0" }}>O'lchamlar</h2>
         <Chips items={r.sizes} selected={sizeIds} onToggle={(id) => setSizeIds(toggle(sizeIds, id))} />
         <QuickAdd placeholder="Yangi o'lcham, masalan: M yoki 42" onAdd={(n) => addRef("sizes", n)} />
         {fields.color_ids && <span className="field-error">{fields.color_ids}</span>}
-        <p className="muted" style={{ margin: 0 }}>
+        <p className="muted">
           {variantCount > 0
             ? `${colorIds.length} rang × ${sizeIds.length} o'lcham = ${variantCount} ta variant (SKU) yaratiladi. Har birining qoldig'i alohida hisoblanadi.`
             : "Rang va o'lcham tanlang: har bir kombinatsiya alohida SKU bo'ladi."}

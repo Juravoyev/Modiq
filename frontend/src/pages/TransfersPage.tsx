@@ -69,7 +69,7 @@ function NewTransfer({ branches, onSaved }: { branches: Branch[]; onSaved: (t: T
 
   return (
     <div className="card stack">
-      <h2 style={{ margin: 0 }}>Yangi ko'chirish · {branch?.name} dan</h2>
+      <h2>Yangi ko'chirish · {branch?.name} dan</h2>
       {error && <ErrorBox message={error} />}
       <div className="grid-2">
         <Field label="Qayerga" error={fields.to_branch}>
@@ -85,7 +85,7 @@ function NewTransfer({ branches, onSaved }: { branches: Branch[]; onSaved: (t: T
         <input className="input" type="search" placeholder="SKU yoki tovar nomi" value={query} onChange={(e) => setQuery(e.target.value)} />
       </Field>
       {search && (results.loading ? <Loading text="Qidirilmoqda..." /> : (
-        <div className="stack" style={{ gap: 6 }}>
+        <div className="stack gap-2">
           {results.data?.results.map((v) => (
             <button key={v.id} className="result-item" onClick={() => add(v)} disabled={(v.stock ?? 0) <= 0}>
               <span>{v.product_name} · {v.color_name} · {v.size_name}</span>
@@ -122,7 +122,7 @@ function NewTransfer({ branches, onSaved }: { branches: Branch[]; onSaved: (t: T
         <button className="btn btn-secondary" disabled={busy || !lines.length} onClick={() => save(false)}>Qoralama saqlash</button>
         <button className="btn btn-primary" disabled={busy || !lines.length || over.length > 0} onClick={() => save(true)}>Saqlash va jo'natish</button>
       </div>
-      <p className="muted" style={{ margin: 0 }}>
+      <p className="muted">
         Jo'natilganda tovar bu filial qoldig'idan chiqadi, qabul qilinganda boshqa filialga qo'shiladi.
       </p>
     </div>
@@ -160,7 +160,7 @@ export function TransfersPage() {
   return (
     <div className="stack">
       <div className="spread">
-        <h1 style={{ margin: 0 }}>Ko'chirish</h1>
+        <h1>Ko'chirish</h1>
         {!creating && <button className="btn btn-primary" onClick={() => { setCreating(true); setMessage(null); }}>+ Yangi ko'chirish</button>}
       </div>
       {message && <Success>{message}</Success>}
@@ -174,8 +174,8 @@ export function TransfersPage() {
       ))}
       {creating && <div><button className="btn btn-secondary btn-sm" onClick={() => setCreating(false)}>Bekor qilish</button></div>}
 
-      <div className="card" style={{ padding: 0 }}>
-        {list.loading ? <Loading /> : list.error ? <div style={{ padding: 16 }}><ErrorBox message={list.error} onRetry={list.reload} /></div> :
+      <div className="card flush">
+        {list.loading ? <Loading /> : list.error ? <div className="pad"><ErrorBox message={list.error} onRetry={list.reload} /></div> :
           !list.data?.results.length ? <Empty title="Hali ko'chirish yo'q" hint="Tovarni ombordan do'konga yoki filiallar o'rtasida ko'chiring." /> : (
             <div className="table-wrap">
               <table className="table">
@@ -183,14 +183,14 @@ export function TransfersPage() {
                 <tbody>
                   {list.data.results.map((t) => (
                     <Fragment key={t.id}>
-                      <tr style={{ cursor: "pointer" }} onClick={() => setOpen(open === t.id ? null : t.id)}>
+                      <tr className="clickable" onClick={() => setOpen(open === t.id ? null : t.id)}>
                         <td>{open === t.id ? "▾" : "▸"} {t.id}</td>
                         <td>{dateTime(t.created_at)}</td>
                         <td>{t.from_branch_name} → {t.to_branch_name}{t.note && <div className="muted">{t.note}</div>}</td>
                         <td className="right num">{t.lines.reduce((n, l) => n + l.quantity, 0)}</td>
                         <td><span className={`badge ${STATUS[t.status].cls}`}>{STATUS[t.status].icon} {STATUS[t.status].label}</span></td>
                         <td onClick={(e) => e.stopPropagation()}>
-                          <div className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+                          <div className="row gap-2 nowrap">
                             {t.status === "draft" && allowed.has(t.from_branch) &&
                               <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => run(t, "send", "Tovar jo'natildi.")}>Jo'natish</button>}
                             {t.status === "sent" && allowed.has(t.to_branch) &&

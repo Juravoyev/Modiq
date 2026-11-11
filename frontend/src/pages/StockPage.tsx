@@ -28,8 +28,8 @@ export function StockPage() {
           ▲ Faqat kam qolganlar
         </button>
       </div>
-      <div className="card" style={{ padding: 0 }}>
-        {loading ? <Loading /> : error ? <div style={{ padding: 16 }}><ErrorBox message={error} onRetry={reload} /></div> :
+      <div className="card flush">
+        {loading ? <Loading /> : error ? <div className="pad"><ErrorBox message={error} onRetry={reload} /></div> :
           !data?.results.length ? (
             <Empty title={low ? "Kam qolgan tovar yo'q" : "Qoldiq yo'q"} hint={low ? undefined : "Qoldiq kirim tasdiqlangandan keyin paydo bo'ladi."} />
           ) : (

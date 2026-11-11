@@ -168,8 +168,8 @@ export function PosPage() {
         <div className="alert alert-success no-print"><span aria-hidden="true">✓</span> Savdo yakunlandi</div>
         <div className="card"><Receipt sale={done} businessName={me?.business.name ?? ""} /></div>
         <div className="row no-print">
-          <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => window.print()}>Chop etish</button>
-          <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => setDone(null)}>Yangi savdo</button>
+          <button className="btn btn-secondary grow" onClick={() => window.print()}>Chop etish</button>
+          <button className="btn btn-primary grow" onClick={() => setDone(null)}>Yangi savdo</button>
         </div>
       </div>
     );
@@ -193,7 +193,7 @@ export function PosPage() {
         ) : !results.data?.results.length ? (
           <Empty title="Hech narsa topilmadi" hint="Boshqa so'z yoki SKU bilan qidirib ko'ring." />
         ) : (
-          <div className="stack" style={{ gap: 8 }}>
+          <div className="stack gap-2">
             {results.data.results.map((v) => {
               const stock = v.stock ?? 0;
               return (
@@ -201,12 +201,12 @@ export function PosPage() {
                   <div className="row" style={{ gap: 10, flexWrap: "nowrap", textAlign: "left" }}>
                     <ProductThumb src={v.product_image} size={44} />
                     <div>
-                    <div style={{ fontWeight: 600 }}>{v.product_name}</div>
+                    <div className="bold">{v.product_name}</div>
                     <div className="muted">{v.color_name} · {v.size_name} · {v.sku}</div>
                     </div>
                   </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div className="num" style={{ fontWeight: 600 }}>{money(v.effective_sale_price)}</div>
+                  <div className="right">
+                    <div className="num bold">{money(v.effective_sale_price)}</div>
                     <div className={stock > 0 ? "muted" : "field-error"}>{stock > 0 ? `${stock} dona` : "Qoldiqda yo'q"}</div>
                   </div>
                 </button>
@@ -218,7 +218,7 @@ export function PosPage() {
 
       <aside className="card pos-cart stack">
         <div className="spread">
-          <h2 style={{ margin: 0 }}>Savat</h2>
+          <h2>Savat</h2>
           {cart.length > 0 && <button className="btn btn-secondary btn-sm" onClick={() => changeCart([])}>Tozalash</button>}
         </div>
         {cart.length === 0 ? (
@@ -231,10 +231,10 @@ export function PosPage() {
               const ql = quoteLine(l.variant.id);
               const lineTotal = ql ? Number(ql.line_total) : gross - Number(l.discount || 0);
               return (
-                <div key={l.variant.id} className="cart-line stack" style={{ gap: 6 }}>
+                <div key={l.variant.id} className="cart-line stack gap-2">
                   <div className="spread">
                     <div>
-                      <div style={{ fontWeight: 600 }}>{l.variant.product_name}</div>
+                      <div className="bold">{l.variant.product_name}</div>
                       <div className="muted">{l.variant.color_name} · {l.variant.size_name}</div>
                     </div>
                     <button className="btn btn-secondary btn-sm" aria-label="O'chirish"
@@ -247,7 +247,7 @@ export function PosPage() {
                       <button onClick={() => setQty(l.variant.id, l.quantity + 1)} aria-label="Ko'paytirish"
                               disabled={l.quantity >= (l.variant.stock ?? 0)}>+</button>
                     </div>
-                    <span className="num" style={{ textAlign: "right" }}>
+                    <span className="num right">
                       {lineTotal !== gross && <s className="muted" style={{ display: "block" }}>{money(gross)}</s>}
                       <b>{money(lineTotal)}</b>
                     </span>
@@ -271,15 +271,15 @@ export function PosPage() {
 
         <CustomerPicker value={customer} onChange={setCustomer} />
         {customer && bonusInfo?.enabled && (
-          <div className="stack" style={{ gap: 6 }}>
+          <div className="stack gap-2">
             <div className="spread">
-              <span className="row" style={{ gap: 6 }}><Icon name="gift" size={16} /> Bonus: <b className="num">{money(bonusInfo.available)}</b></span>
+              <span className="row gap-2"><Icon name="gift" size={16} /> Bonus: <b className="num">{money(bonusInfo.available)}</b></span>
               {Number(bonusInfo.pending) > 0 && (
                 <span className="muted">+{money(bonusInfo.pending)} 24 soatdan keyin</span>
               )}
             </div>
             {Number(bonusInfo.available) > 0 && (
-              <div className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+              <div className="row gap-2 nowrap">
                 <input className="input" inputMode="numeric" placeholder={`Bonusdan to'lash (ko'pi bilan ${money(bonusInfo.max)})`}
                        value={bonusInput} aria-label="Bonusdan to'lanadigan summa"
                        onChange={(e) => { setBonusInput(e.target.value.replace(/[^\d]/g, "")); setIdemKey(newIdempotencyKey()); }} />
@@ -319,7 +319,7 @@ export function PosPage() {
         {error && <ErrorBox message={error} />}
         {!error && fresh?.error && <ErrorBox message={fresh.error.message} />}
         {needBelowCostConfirm && (
-          <label className="alert alert-warn" style={{ cursor: "pointer" }}>
+          <label className="alert alert-warn clickable">
             <input type="checkbox" checked={belowCostConfirmed} onChange={(e) => setBelowCostConfirmed(e.target.checked)} />
             Narx xarid narxidan past ekanini bilaman va tasdiqlayman.
           </label>

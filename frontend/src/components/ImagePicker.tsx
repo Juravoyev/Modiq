@@ -31,7 +31,7 @@ export function ImagePicker({ current, onPick, onRemove, busy }: {
 
   const shown = preview ?? current;
   return (
-    <div className="stack" style={{ gap: 4 }}>
+    <div className="stack gap-1">
       <div className="image-picker">
         <ProductThumb src={shown} size={96} alt="Tovar rasmi" />
         <input ref={input} type="file" accept={ACCEPT} hidden onChange={pick} />

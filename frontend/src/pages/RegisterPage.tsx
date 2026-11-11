@@ -36,7 +36,7 @@ export function RegisterPage() {
   return (
     <div className="auth-page">
       <form className="card auth-card stack" onSubmit={submit}>
-        <div className="row" style={{ gap: 10 }}><Logo size={36} /><h1 style={{ margin: 0 }}>Ro'yxatdan o'tish</h1></div>
+        <div className="row gap-3"><Logo size={36} /><h1>Ro'yxatdan o'tish</h1></div>
         {error && <ErrorBox message={error} />}
         <Field label="Do'kon nomi" error={fields.business_name}>
           <input className="input" value={form.business_name} onChange={set("business_name")} required />
@@ -53,7 +53,7 @@ export function RegisterPage() {
                  onChange={set("password")} autoComplete="new-password" minLength={8} required />
         </Field>
         <button className="btn btn-primary btn-lg" disabled={busy}>{busy ? "Yaratilmoqda..." : "Do'konni yaratish"}</button>
-        <p className="muted" style={{ textAlign: "center", margin: 0 }}>
+        <p className="muted center">
           Hisobingiz bormi? <Link to="/login">Kirish</Link>
         </p>
       </form>

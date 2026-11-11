@@ -50,7 +50,7 @@ export function CustomerForm({ customer, groups, initialPhone = "", onSaved, onC
 
   return (
     <form className="card stack" onSubmit={submit}>
-      <h2 style={{ margin: 0 }}>{customer ? `Tahrirlash: ${customer.full_name || customer.phone}` : "Yangi mijoz"}</h2>
+      <h2>{customer ? `Tahrirlash: ${customer.full_name || customer.phone}` : "Yangi mijoz"}</h2>
       {error && <ErrorBox message={error} />}
       <div className="grid-2">
         <Field label="Telefon *" error={fields.phone}>
@@ -119,18 +119,18 @@ function GroupsCard({ groups, onChanged }: { groups: CustomerGroup[]; onChanged:
 
   return (
     <div className="card stack">
-      <h2 style={{ margin: 0 }}>Imtiyoz toifalari</h2>
-      <p className="muted" style={{ margin: 0 }}>
+      <h2>Imtiyoz toifalari</h2>
+      <p className="muted">
         Toifadagi mijozga kassada doimiy chegirma beriladi. Aksiya bilan ustma-ust qo'shilmaydi: ikkisidan mijoz
         uchun foydalirog'i olinadi. Narx tannarxdan pastga tushmaydi.
       </p>
       {error && <ErrorBox message={error} />}
       {groups.length > 0 && (
-        <div className="stack" style={{ gap: 6 }}>
+        <div className="stack gap-2">
           {groups.map((g) => (
             <div key={g.id} className="spread">
               <span><GroupBadge name={g.name} percent={g.discount_percent} /> <span className="muted">{g.customers_count} mijoz</span></span>
-              <span className="row" style={{ gap: 6 }}>
+              <span className="row gap-2">
                 <button className="btn btn-secondary btn-sm" onClick={() => {
                   setEditing(g.id); setForm({ name: g.name, discount_percent: String(g.discount_percent) });
                 }} aria-label="Tahrirlash" title="Tahrirlash"><Icon name="pencil" size={15} /></button>
@@ -166,7 +166,7 @@ function BonusHistory({ customer, onClose }: { customer: Customer; onClose: () =
   return (
     <div className="card stack">
       <div className="spread">
-        <h2 style={{ margin: 0 }}>Bonus tarixi: {customer.full_name || customer.phone}</h2>
+        <h2>Bonus tarixi: {customer.full_name || customer.phone}</h2>
         <button className="btn btn-secondary btn-sm" onClick={onClose}>Yopish</button>
       </div>
       <div className="row">
@@ -213,7 +213,7 @@ export function CustomersPage() {
   return (
     <div className="stack">
       <div className="spread">
-        <h1 style={{ margin: 0 }}>Mijozlar</h1>
+        <h1>Mijozlar</h1>
         {!editing && <button className="btn btn-primary" onClick={() => { setEditing("new"); setMessage(null); }}>+ Yangi mijoz</button>}
       </div>
       {message && <Success>{message}</Success>}
@@ -231,7 +231,7 @@ export function CustomersPage() {
       ) : list.data.results.length === 0 ? (
         <Empty title="Mijoz topilmadi" hint="Mijozni shu yerda yoki kassada telefon raqami bilan qo'shing." />
       ) : (
-        <div className="card" style={{ padding: 0 }}>
+        <div className="card flush">
           <div className="table-wrap">
             <table className="table">
               <thead><tr><th>Mijoz</th><th>Toifa</th><th className="right">Xaridlar</th><th className="right">Bonus</th><th /></tr></thead>

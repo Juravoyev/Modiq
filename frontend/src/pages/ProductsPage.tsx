@@ -25,14 +25,14 @@ export function ProductsPage() {
   return (
     <div className="stack">
       <div className="spread">
-        <h1 style={{ margin: 0 }}>Tovarlar</h1>
+        <h1>Tovarlar</h1>
         {isManager && <Link className="btn btn-primary" to="/products/new">+ Yangi tovar</Link>}
       </div>
       {notice && <div className="alert alert-warn"><span aria-hidden="true">▲</span> {notice}</div>}
       <input className="input" type="search" placeholder="Nomi, artikul yoki SKU" value={query}
              onChange={(e) => { setQuery(e.target.value); setPage(1); }} aria-label="Qidirish" />
-      <div className="card" style={{ padding: 0 }}>
-        {loading ? <Loading /> : error ? <div style={{ padding: 16 }}><ErrorBox message={error} onRetry={reload} /></div> :
+      <div className="card flush">
+        {loading ? <Loading /> : error ? <div className="pad"><ErrorBox message={error} onRetry={reload} /></div> :
           !data?.results.length ? (
             <Empty title={search ? "Hech narsa topilmadi" : "Hali tovar qo'shilmagan"}
                    hint={search ? undefined : "Birinchi tovarni rang va o'lchamlari bilan qo'shing."}
@@ -46,9 +46,9 @@ export function ProductsPage() {
                 <tbody>
                   {data.results.map((p) => (
                     <Fragment key={p.id}>
-                      <tr style={{ cursor: "pointer" }} onClick={() => setOpen(open === p.id ? null : p.id)}>
+                      <tr className="clickable" onClick={() => setOpen(open === p.id ? null : p.id)}>
                         <td>
-                          <div className="row" style={{ gap: 10, flexWrap: "nowrap" }}>
+                          <div className="row gap-3 nowrap">
                             <span aria-hidden="true">{open === p.id ? "▾" : "▸"}</span>
                             <ProductThumb src={p.image} alt={p.name} />
                             <span><b>{p.name}</b>

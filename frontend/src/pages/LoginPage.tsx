@@ -33,8 +33,8 @@ export function LoginPage() {
   return (
     <div className="auth-page">
       <form className="card auth-card stack" onSubmit={submit}>
-        <div className="row" style={{ gap: 10 }}><Logo size={36} /><h1 style={{ margin: 0 }}>Modiq</h1></div>
-        <p className="muted" style={{ margin: 0 }}>Do'koningiz hisobiga kiring</p>
+        <div className="row gap-3"><Logo size={36} /><h1>Modiq</h1></div>
+        <p className="muted">Do'koningiz hisobiga kiring</p>
         {error && <ErrorBox message={error} />}
         <Field label="Telefon raqami">
           <input className="input" type="tel" inputMode="tel" autoComplete="username" value={phone}
@@ -45,7 +45,7 @@ export function LoginPage() {
                  onChange={(e) => setPassword(e.target.value)} required />
         </Field>
         <button className="btn btn-primary btn-lg" disabled={busy}>{busy ? "Kirilmoqda..." : "Kirish"}</button>
-        <p className="muted" style={{ textAlign: "center", margin: 0 }}>
+        <p className="muted center">
           Hisobingiz yo'qmi? <Link to="/register">Do'konni ro'yxatdan o'tkazish</Link>
         </p>
       </form>

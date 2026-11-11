@@ -16,8 +16,8 @@ export function Empty({ title, hint, action }: { title: string; hint?: string; a
     <div className="state">
       <div className="state-icon"><Icon name="box" size={26} /></div>
       <div style={{ fontWeight: 600, color: "var(--text)" }}>{title}</div>
-      {hint && <div className="muted" style={{ marginTop: 4 }}>{hint}</div>}
-      {action && <div style={{ marginTop: 12 }}>{action}</div>}
+      {hint && <div className="muted mt-1">{hint}</div>}
+      {action && <div className="mt-3">{action}</div>}
     </div>
   );
 }
@@ -26,7 +26,7 @@ export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () =
   return (
     <div className="alert alert-error" role="alert">
       <Icon name="alert" className="alert-icon" />
-      <div style={{ flex: 1 }}>{message}</div>
+      <div className="grow">{message}</div>
       {onRetry && <button className="btn btn-secondary btn-sm" onClick={onRetry}>Qayta urinish</button>}
     </div>
   );
@@ -58,7 +58,7 @@ export function Pagination({ page, count, pageSize = 25, onChange }: {
   const pages = Math.max(1, Math.ceil(count / pageSize));
   if (pages <= 1) return null;
   return (
-    <div className="spread" style={{ marginTop: 12 }}>
+    <div className="spread mt-3">
       <span className="muted">Jami: {count}</span>
       <div className="row">
         <button className="btn btn-secondary btn-sm" disabled={page <= 1} onClick={() => onChange(page - 1)}>‹ Oldingi</button>

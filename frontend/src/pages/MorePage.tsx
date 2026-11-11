@@ -10,10 +10,10 @@ export function MorePage() {
   return (
     <div className="stack">
       <h1>Bo'limlar</h1>
-      <div className="stack" style={{ gap: 8 }}>
+      <div className="stack gap-2">
         {navFor(isManager).map((n) => (
           <Link key={n.to} to={n.to} className="result-item" style={{ textDecoration: "none", color: "inherit" }}>
-            <span className="row" style={{ gap: 10 }}><Icon name={n.icon} size={20} /> {n.label}</span>
+            <span className="row gap-3"><Icon name={n.icon} size={20} /> {n.label}</span>
             <Icon name="chevron-right" className="muted" />
           </Link>
         ))}

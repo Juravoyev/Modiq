@@ -166,7 +166,7 @@ export function Assistant({ open, onClose }: { open: boolean; onClose: () => voi
       <div className="assistant-backdrop" onClick={onClose} aria-hidden="true" />
       <aside className="assistant-panel" role="dialog" aria-label="Yordamchi">
         <header className="assistant-head">
-          <b className="row" style={{ gap: 8 }}><Icon name="sparkles" /> Yordamchi</b>
+          <b className="row gap-2"><Icon name="sparkles" /> Yordamchi</b>
           <button className="btn btn-secondary btn-sm" onClick={onClose} aria-label="Yopish"><Icon name="x" size={16} /></button>
         </header>
         <div className="assistant-body" ref={listRef}>{body}</div>
@@ -178,7 +178,7 @@ export function Assistant({ open, onClose }: { open: boolean; onClose: () => voi
             aria-label="Savol"
           />
           <div className="spread">
-            <div className="row" style={{ gap: 6 }}>
+            <div className="row gap-2">
               <button type="button" className="btn btn-secondary btn-sm" onClick={home} title="Tayyor mavzular"
                       aria-label="Tayyor mavzular"><Icon name="grid" size={16} /></button>
               <span className="badge badge-neutral">{aiReady ? "Gemini" : "Faqat tayyor mavzular"}</span>

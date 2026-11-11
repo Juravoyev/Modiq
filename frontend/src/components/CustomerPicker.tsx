@@ -53,7 +53,7 @@ export function CustomerPicker({ value, onChange }: { value: CustomerBrief | nul
     return (
       <div className="spread" style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "8px 10px" }}>
         <div>
-          <div className="row" style={{ fontWeight: 600, gap: 6 }}><Icon name="user" size={16} /> {value.full_name || value.phone}</div>
+          <div className="row bold gap-2"><Icon name="user" size={16} /> {value.full_name || value.phone}</div>
           <div className="muted num">{value.phone} <GroupBadge name={value.group_name} percent={value.discount_percent} /></div>
         </div>
         <button className="btn btn-secondary btn-sm" aria-label="Mijozni olib tashlash" onClick={() => onChange(null)}><Icon name="x" size={15} /></button>
@@ -70,8 +70,8 @@ export function CustomerPicker({ value, onChange }: { value: CustomerBrief | nul
   }
 
   return (
-    <div className="stack" style={{ gap: 6 }}>
-      <form className="row" style={{ gap: 6, flexWrap: "nowrap" }} onSubmit={find}>
+    <div className="stack gap-2">
+      <form className="row gap-2 nowrap" onSubmit={find}>
         <input className="input" inputMode="tel" placeholder="Mijoz telefoni (ixtiyoriy)" value={phone}
                onChange={(e) => { setPhone(e.target.value); setNotFound(false); }} aria-label="Mijoz telefoni" />
         <button className="btn btn-secondary" disabled={busy || !phone.trim()}>Topish</button>

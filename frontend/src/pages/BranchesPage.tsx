@@ -35,7 +35,7 @@ function BranchForm({ branch, onSaved, onCancel }: { branch: Branch | null; onSa
 
   return (
     <form className="card stack" onSubmit={submit}>
-      <h2 style={{ margin: 0 }}>{branch ? `Tahrirlash: ${branch.name}` : "Yangi filial"}</h2>
+      <h2>{branch ? `Tahrirlash: ${branch.name}` : "Yangi filial"}</h2>
       {error && <ErrorBox message={error} />}
       <div className="grid-2">
         <Field label="Nomi *" error={fields.name}>
@@ -52,7 +52,7 @@ function BranchForm({ branch, onSaved, onCancel }: { branch: Branch | null; onSa
         </Field>
       </div>
       {branch && (
-        <label className="row" style={{ gap: 8 }}>
+        <label className="row gap-2">
           <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} />
           Faol (yopilgan filial kassada va ro'yxatlarda ko'rinmaydi, tarixi saqlanadi)
         </label>
@@ -78,7 +78,7 @@ export function BranchesPage() {
   return (
     <div className="stack">
       <div className="spread">
-        <h1 style={{ margin: 0 }}>Filiallar</h1>
+        <h1>Filiallar</h1>
         {!editing && <button className="btn btn-primary" onClick={() => { setEditing("new"); setMessage(null); }}>+ Yangi filial</button>}
       </div>
       {message && <Success>{message}</Success>}
@@ -93,7 +93,7 @@ export function BranchesPage() {
                       void reloadMe();
                     }} />
       )}
-      <div className="card" style={{ padding: 0 }}>
+      <div className="card flush">
         <div className="table-wrap">
           <table className="table">
             <thead><tr><th>Nomi</th><th>Turi</th><th>Manzil</th><th>Holat</th><th /></tr></thead>

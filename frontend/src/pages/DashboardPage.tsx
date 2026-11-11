@@ -85,14 +85,14 @@ export function DashboardPage() {
   return (
     <div className="stack">
       <div className="spread">
-        <h1 style={{ margin: 0 }}>Hisobot · {allBranches ? "barcha filiallar" : branch?.name}</h1>
-        <div className="row" style={{ gap: 8 }}>
+        <h1>Hisobot · {allBranches ? "barcha filiallar" : branch?.name}</h1>
+        <div className="row gap-2">
           {multi && (
             <button className={`chip ${allBranches ? "on" : ""}`} aria-pressed={allBranches} onClick={() => setAllBranches(!allBranches)}>
               Barcha filiallar
             </button>
           )}
-          <div className="row" role="radiogroup" aria-label="Davr" style={{ gap: 6 }}>
+          <div className="row gap-2" role="radiogroup" aria-label="Davr">
             {PERIODS.map((p) => (
               <button key={p} role="radio" aria-checked={days === p} className={`chip ${days === p ? "on" : ""}`} onClick={() => setDays(p)}>
                 {p} kun
@@ -105,7 +105,7 @@ export function DashboardPage() {
       {loading && !data ? <Loading /> : error || !data ? <ErrorBox message={error ?? "Xatolik"} onRetry={reload} /> : (
         <>
           {data.pending_returns > 0 && (
-            <Link to="/returns" className="alert alert-warn" style={{ textDecoration: "none" }}>
+            <Link to="/returns" className="alert alert-warn plain-link">
               <Icon name="clock" className="alert-icon" /> {data.pending_returns} ta qaytarish so'rovi tasdiqni kutmoqda <Icon name="chevron-right" size={16} />
             </Link>
           )}
@@ -130,13 +130,13 @@ export function DashboardPage() {
           </div>
 
           <div className="card stack">
-            <h2 style={{ margin: 0 }}>Kunlik tushum</h2>
+            <h2>Kunlik tushum</h2>
             {data.period.sales_count === 0 ? <Empty title="Bu davrda savdo yo'q" /> : <DailyChart daily={data.daily} />}
           </div>
 
           <div className="grid-2">
             <div className="card stack">
-              <h2 style={{ margin: 0 }}>Eng ko'p sotilganlar</h2>
+              <h2>Eng ko'p sotilganlar</h2>
               {!data.top_products.length ? <span className="muted">Savdo yo'q</span> : (
                 <table className="table">
                   <thead><tr><th>Tovar</th><th className="right">Dona</th><th className="right">Tushum</th></tr></thead>
@@ -149,7 +149,7 @@ export function DashboardPage() {
               )}
             </div>
             <div className="card stack">
-              <h2 style={{ margin: 0 }}>To'lov turlari</h2>
+              <h2>To'lov turlari</h2>
               {!data.payments.length ? <span className="muted">Savdo yo'q</span> : (
                 <table className="table">
                   <thead><tr><th>Tur</th><th className="right">Savdolar</th><th className="right">Summa</th></tr></thead>
@@ -165,7 +165,7 @@ export function DashboardPage() {
 
           <div className="card stack">
             <div>
-              <h2 style={{ margin: 0 }}>Sotilmay turgan tovarlar</h2>
+              <h2>Sotilmay turgan tovarlar</h2>
               <span className="muted">Qoldig'i bor, lekin oxirgi {data.days} kunda bitta ham sotilmagan. Aksiya yoki chegirma uchun nomzodlar.</span>
             </div>
             <div><Link className="btn btn-primary btn-sm" to="/insights"><Icon name="bulb" size={16} /> Tavsiyalar: qaysi tovarga necha foiz chegirma</Link></div>

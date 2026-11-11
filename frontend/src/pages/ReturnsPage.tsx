@@ -53,8 +53,8 @@ export function ReturnForm({ sale, onDone, onCancel }: { sale: Sale; onDone: (r:
 
   return (
     <div className="card stack no-print">
-      <h2 style={{ margin: 0 }}>Yaroqsiz tovarni qaytarish</h2>
-      <p className="muted" style={{ margin: 0 }}>
+      <h2>Yaroqsiz tovarni qaytarish</h2>
+      <p className="muted">
         Faqat yaroqsiz tovar qaytariladi. Qaytarilgan tovar sotuvga qaytmaydi, hisobdan chiqariladi.
         Muddat: {dateTime(sale.return_deadline)} gacha.
       </p>
@@ -131,7 +131,7 @@ export function ReturnsPage() {
   return (
     <div className="stack">
       <h1>Qaytarish · {branch?.name}</h1>
-      <p className="muted" style={{ margin: 0 }}>
+      <p className="muted">
         Yangi qaytarish "Savdolar" bo'limida chekni ochib qilinadi.
         {!canDecide && " Sizning so'rovingizni mas'ul xodim tasdiqlagach, mijozga pulni qaytarasiz."}
       </p>
@@ -143,8 +143,8 @@ export function ReturnsPage() {
       </div>
       {message && <Success>{message}</Success>}
       {actionError && <ErrorBox message={actionError} />}
-      <div className="card" style={{ padding: 0 }}>
-        {list.loading ? <Loading /> : list.error ? <div style={{ padding: 16 }}><ErrorBox message={list.error} onRetry={list.reload} /></div> :
+      <div className="card flush">
+        {list.loading ? <Loading /> : list.error ? <div className="pad"><ErrorBox message={list.error} onRetry={list.reload} /></div> :
           !list.data?.results.length ? <Empty title="Qaytarish yo'q" /> : (
             <div className="table-wrap">
               <table className="table">
@@ -169,7 +169,7 @@ export function ReturnsPage() {
                       <td><ReturnBadge r={r} />{r.decided_by_name && <div className="muted">{r.decided_by_name}</div>}</td>
                       <td>
                         {canDecide && r.status === "pending" && (
-                          <div className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+                          <div className="row gap-2 nowrap">
                             <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => decide(r, true)}>Tasdiqlash</button>
                             <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => decide(r, false)}>Rad etish</button>
                           </div>
