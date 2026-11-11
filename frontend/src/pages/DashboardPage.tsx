@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 import { api, qs } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import { Empty, ErrorBox, Loading } from "../components/ui";
+import { Empty, ErrorBox, Loading, PageHeader } from "../components/ui";
 import { money } from "../utils/format";
 import { useAsync } from "../utils/useAsync";
 import { Icon } from "../components/Icon";
@@ -84,8 +84,7 @@ export function DashboardPage() {
 
   return (
     <div className="stack">
-      <div className="spread">
-        <h1>Hisobot · {allBranches ? "barcha filiallar" : branch?.name}</h1>
+      <PageHeader title="Hisobot" subtitle={allBranches ? "Barcha filiallar" : branch?.name}>
         <div className="row gap-2">
           {multi && (
             <button className={`chip ${allBranches ? "on" : ""}`} aria-pressed={allBranches} onClick={() => setAllBranches(!allBranches)}>
@@ -100,7 +99,7 @@ export function DashboardPage() {
             ))}
           </div>
         </div>
-      </div>
+      </PageHeader>
 
       {loading && !data ? <Loading /> : error || !data ? <ErrorBox message={error ?? "Xatolik"} onRetry={reload} /> : (
         <>

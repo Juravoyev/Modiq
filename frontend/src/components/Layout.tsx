@@ -6,24 +6,27 @@ import { Assistant } from "./Assistant";
 import { Icon, type IconName } from "./Icon";
 import { Logo } from "./Logo";
 
-interface NavItem { to: string; label: string; icon: IconName; end?: boolean; managerOnly?: boolean; mobile?: boolean }
+type NavGroup = "Savdo" | "Ombor" | "Mijozlar" | "Boshqaruv";
+interface NavItem { to: string; label: string; icon: IconName; group: NavGroup; end?: boolean; managerOnly?: boolean; mobile?: boolean }
 
 // mobile: telefonning pastki menyusida ko'rinadi, qolganlari "Yana" sahifasida.
 export const NAV: NavItem[] = [
-  { to: "/", label: "Kassa", icon: "cart", end: true, mobile: true },
-  { to: "/dashboard", label: "Hisobot", icon: "chart", managerOnly: true },
-  { to: "/insights", label: "Tavsiyalar", icon: "bulb", managerOnly: true },
-  { to: "/products", label: "Tovarlar", icon: "shirt", mobile: true },
-  { to: "/receipts", label: "Kirim", icon: "inbox", managerOnly: true },
-  { to: "/transfers", label: "Ko'chirish", icon: "transfer", managerOnly: true },
-  { to: "/stock", label: "Qoldiq", icon: "box", mobile: true },
-  { to: "/sales", label: "Savdolar", icon: "receipt", mobile: true },
-  { to: "/returns", label: "Qaytarish", icon: "undo" },
-  { to: "/customers", label: "Mijozlar", icon: "user" },
-  { to: "/promotions", label: "Aksiyalar", icon: "tag", managerOnly: true },
-  { to: "/staff", label: "Xodimlar", icon: "users", managerOnly: true },
-  { to: "/branches", label: "Filiallar", icon: "store", managerOnly: true },
+  { to: "/", label: "Kassa", icon: "cart", group: "Savdo", end: true, mobile: true },
+  { to: "/sales", label: "Savdolar", icon: "receipt", group: "Savdo", mobile: true },
+  { to: "/returns", label: "Qaytarish", icon: "undo", group: "Savdo" },
+  { to: "/products", label: "Tovarlar", icon: "shirt", group: "Ombor", mobile: true },
+  { to: "/stock", label: "Qoldiq", icon: "box", group: "Ombor", mobile: true },
+  { to: "/receipts", label: "Kirim", icon: "inbox", group: "Ombor", managerOnly: true },
+  { to: "/transfers", label: "Ko'chirish", icon: "transfer", group: "Ombor", managerOnly: true },
+  { to: "/customers", label: "Mijozlar", icon: "user", group: "Mijozlar" },
+  { to: "/promotions", label: "Aksiyalar", icon: "tag", group: "Mijozlar", managerOnly: true },
+  { to: "/dashboard", label: "Hisobot", icon: "chart", group: "Boshqaruv", managerOnly: true },
+  { to: "/insights", label: "Tavsiyalar", icon: "bulb", group: "Boshqaruv", managerOnly: true },
+  { to: "/staff", label: "Xodimlar", icon: "users", group: "Boshqaruv", managerOnly: true },
+  { to: "/branches", label: "Filiallar", icon: "store", group: "Boshqaruv", managerOnly: true },
 ];
+const GROUPS: NavGroup[] = ["Savdo", "Ombor", "Mijozlar", "Boshqaruv"];
+const ROLE_LABEL = { owner: "Do'kon egasi", manager: "Menejer", cashier: "Sotuvchi" } as const;
 
 export function navFor(isManager: boolean) {
   return NAV.filter((n) => isManager || !n.managerOnly);
@@ -40,20 +43,40 @@ export function Layout() {
     <div className="app">
       <aside className="sidebar">
         <div className="brand"><Logo /> Modiq</div>
-        {nav.map((n) => (
-          <NavLink key={n.to} to={n.to} end={n.end} className="nav-link">
-            <Icon name={n.icon} size={19} /> {n.label}
-          </NavLink>
-        ))}
+        <nav className="sidebar-nav" aria-label="Bo'limlar">
+          {GROUPS.map((g) => {
+            const items = nav.filter((n) => n.group === g);
+            if (!items.length) return null;
+            return (
+              <div key={g} className="nav-group">
+                <div className="nav-group-title">{g}</div>
+                {items.map((n) => (
+                  <NavLink key={n.to} to={n.to} end={n.end} className="nav-link">
+                    <Icon name={n.icon} size={19} /> {n.label}
+                  </NavLink>
+                ))}
+              </div>
+            );
+          })}
+        </nav>
+        {me && (
+          <div className="sidebar-user">
+            <span className="avatar" aria-hidden="true">{(me.full_name || me.phone).trim().charAt(0).toUpperCase()}</span>
+            <span className="sidebar-user-text">
+              <span className="sidebar-user-name">{me.full_name || me.phone}</span>
+              <span className="sidebar-user-role">{ROLE_LABEL[me.role]}</span>
+            </span>
+          </div>
+        )}
       </aside>
 
       <div className="main">
         <header className="topbar">
-          <div className="row gap-2">
-            <span style={{ fontWeight: 700, color: "var(--green-dark)" }}>{me?.business.name}</span>
+          <div className="topbar-left">
+            <span className="topbar-business">{me?.business.name}</span>
             {branches.length > 1 ? (
               <select
-                className="input" style={{ width: "auto", minHeight: 36, padding: "4px 8px" }}
+                className="input branch-select"
                 value={branch?.id ?? ""} onChange={(e) => setBranchId(Number(e.target.value))}
                 aria-label="Filial"
               >
@@ -63,11 +86,13 @@ export function Layout() {
               <span className="muted">{branch?.name}</span>
             )}
           </div>
-          <div className="row gap-2">
-            <button className="btn btn-secondary btn-sm" onClick={() => setHelpOpen(true)} aria-haspopup="dialog">
-              <Icon name="sparkles" size={16} /> Yordamchi
+          <div className="topbar-actions">
+            <button className="btn btn-secondary btn-sm" onClick={() => setHelpOpen(true)} aria-haspopup="dialog" aria-label="Yordamchi">
+              <Icon name="sparkles" size={16} /> <span className="btn-label">Yordamchi</span>
             </button>
-            <button className="btn btn-secondary btn-sm" onClick={logout}><Icon name="logout" size={16} /> Chiqish</button>
+            <button className="btn btn-secondary btn-sm" onClick={logout} aria-label="Chiqish">
+              <Icon name="logout" size={16} /> <span className="btn-label">Chiqish</span>
+            </button>
           </div>
         </header>
 

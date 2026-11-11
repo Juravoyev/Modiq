@@ -3,7 +3,7 @@ import { useState, type FormEvent } from "react";
 import { api, ApiError, qs } from "../api/client";
 import type { BonusTransaction, Customer, CustomerGroup, Page } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
-import { Empty, ErrorBox, Field, Loading, Pagination, Success } from "../components/ui";
+import { Empty, ErrorBox, Field, Loading, PageHeader, Pagination, Success } from "../components/ui";
 import { dateTime, money } from "../utils/format";
 import { useAsync, useDebounced } from "../utils/useAsync";
 import { Icon } from "../components/Icon";
@@ -212,10 +212,9 @@ export function CustomersPage() {
 
   return (
     <div className="stack">
-      <div className="spread">
-        <h1>Mijozlar</h1>
-        {!editing && <button className="btn btn-primary" onClick={() => { setEditing("new"); setMessage(null); }}>+ Yangi mijoz</button>}
-      </div>
+      <PageHeader title="Mijozlar">
+        {!editing && <button className="btn btn-primary" onClick={() => { setEditing("new"); setMessage(null); }}><Icon name="plus" size={18} /> Yangi mijoz</button>}
+      </PageHeader>
       {message && <Success>{message}</Success>}
       {editing && (
         <CustomerForm key={editing === "new" ? "new" : editing.id} customer={editing === "new" ? null : editing}

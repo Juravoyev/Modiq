@@ -3,7 +3,7 @@ import { useState } from "react";
 import { api, ApiError, qs } from "../api/client";
 import type { Page, Variant } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
-import { Empty, ErrorBox, Field, Loading, Pagination, Success } from "../components/ui";
+import { Empty, ErrorBox, Field, Loading, PageHeader, Pagination, Success } from "../components/ui";
 import { dateTime, money } from "../utils/format";
 import { useAsync, useDebounced } from "../utils/useAsync";
 import { Icon } from "../components/Icon";
@@ -154,10 +154,9 @@ export function ReceiptsPage() {
 
   return (
     <div className="stack">
-      <div className="spread">
-        <h1>Kirim</h1>
-        {isManager && !creating && <button className="btn btn-primary" onClick={() => { setCreating(true); setMessage(null); }}>+ Yangi kirim</button>}
-      </div>
+      <PageHeader title="Kirim">
+        {isManager && !creating && <button className="btn btn-primary" onClick={() => { setCreating(true); setMessage(null); }}><Icon name="plus" size={18} /> Yangi kirim</button>}
+      </PageHeader>
       {!isManager && <div className="alert alert-warn">Kirimni faqat menejer yoki do'kon egasi kiritadi.</div>}
       {message && <Success>{message}</Success>}
       {actionError && <ErrorBox message={actionError} />}

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { api, ApiError, qs } from "../api/client";
 import type { Page, ReturnStatus, Sale, SaleReturn } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
-import { Empty, ErrorBox, Field, Loading, Pagination, Success } from "../components/ui";
+import { Empty, ErrorBox, Field, Loading, PageHeader, Pagination, Success } from "../components/ui";
 import { dateTime, money } from "../utils/format";
 import { useAsync } from "../utils/useAsync";
 
@@ -130,7 +130,7 @@ export function ReturnsPage() {
 
   return (
     <div className="stack">
-      <h1>Qaytarish · {branch?.name}</h1>
+      <PageHeader title="Qaytarish" subtitle={branch?.name} />
       <p className="muted">
         Yangi qaytarish "Savdolar" bo'limida chekni ochib qilinadi.
         {!canDecide && " Sizning so'rovingizni mas'ul xodim tasdiqlagach, mijozga pulni qaytarasiz."}

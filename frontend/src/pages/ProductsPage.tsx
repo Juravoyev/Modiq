@@ -4,7 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import { api, qs } from "../api/client";
 import type { Page, Product } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
-import { Empty, ErrorBox, Loading, Pagination, ProductThumb, StockBadge } from "../components/ui";
+import { Empty, ErrorBox, Loading, PageHeader, Pagination, ProductThumb, StockBadge } from "../components/ui";
 import { money } from "../utils/format";
 import { useAsync, useDebounced } from "../utils/useAsync";
 import { Icon } from "../components/Icon";
@@ -24,10 +24,9 @@ export function ProductsPage() {
 
   return (
     <div className="stack">
-      <div className="spread">
-        <h1>Tovarlar</h1>
-        {isManager && <Link className="btn btn-primary" to="/products/new">+ Yangi tovar</Link>}
-      </div>
+      <PageHeader title="Tovarlar">
+        {isManager && <Link className="btn btn-primary" to="/products/new"><Icon name="plus" size={18} /> Yangi tovar</Link>}
+      </PageHeader>
       {notice && <div className="alert alert-warn"><span aria-hidden="true">▲</span> {notice}</div>}
       <input className="input" type="search" placeholder="Nomi, artikul yoki SKU" value={query}
              onChange={(e) => { setQuery(e.target.value); setPage(1); }} aria-label="Qidirish" />
@@ -36,7 +35,7 @@ export function ProductsPage() {
           !data?.results.length ? (
             <Empty title={search ? "Hech narsa topilmadi" : "Hali tovar qo'shilmagan"}
                    hint={search ? undefined : "Birinchi tovarni rang va o'lchamlari bilan qo'shing."}
-                   action={!search && isManager ? <Link className="btn btn-primary" to="/products/new">+ Yangi tovar</Link> : undefined} />
+                   action={!search && isManager ? <Link className="btn btn-primary" to="/products/new"><Icon name="plus" size={18} /> Yangi tovar</Link> : undefined} />
           ) : (
             <div className="table-wrap">
               <table className="table">

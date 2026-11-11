@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { api, ApiError, qs } from "../api/client";
 import type { AiSummary, InsightSettings, Recommendation, RecommendationsResponse, RiskLevel } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
-import { Empty, ErrorBox, Field, Loading, ProductThumb, Success } from "../components/ui";
+import { Empty, ErrorBox, Field, Loading, PageHeader, ProductThumb, Success } from "../components/ui";
 import { money } from "../utils/format";
 import { useAsync } from "../utils/useAsync";
 import type { PromotionPrefill } from "./PromotionsPage";
@@ -207,10 +207,9 @@ export function RecommendationsPage() {
 
   return (
     <div className="stack">
-      <div className="spread">
-        <h1>Tavsiyalar</h1>
+      <PageHeader title="Tavsiyalar">
         <button className="btn btn-secondary btn-sm" onClick={() => setShowSettings((s) => !s)}><Icon name="sliders" size={16} /> Qoidalar</button>
-      </div>
+      </PageHeader>
       <p className="muted">
         Sotilmay qolish xavfi bo'lgan tovarlar va ularga tavsiya qilinadigan chegirma. Har bir tavsiyaning sababi ko'rsatilgan.
       </p>

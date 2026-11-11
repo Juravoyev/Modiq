@@ -2,6 +2,19 @@ import { useState, type InputHTMLAttributes, type ReactNode } from "react";
 
 import { Icon } from "./Icon";
 
+/** Sahifa sarlavhasi: nom, ixtiyoriy izoh (masalan, filial nomi) va o'ng tomonda amal tugmalari. */
+export function PageHeader({ title, subtitle, children }: { title: string; subtitle?: ReactNode; children?: ReactNode }) {
+  return (
+    <header className="page-header">
+      <div>
+        <h1>{title}</h1>
+        {subtitle && <div className="page-subtitle">{subtitle}</div>}
+      </div>
+      {children && <div className="row gap-2">{children}</div>}
+    </header>
+  );
+}
+
 export function Loading({ text = "Yuklanmoqda..." }: { text?: string }) {
   return (
     <div className="state" role="status">

@@ -3,7 +3,7 @@ import { useState, type FormEvent } from "react";
 import { api, ApiError } from "../api/client";
 import type { Branch, Page } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
-import { ErrorBox, Field, Loading, Success } from "../components/ui";
+import { ErrorBox, Field, Loading, PageHeader, Success } from "../components/ui";
 import { useAsync } from "../utils/useAsync";
 import { Icon } from "../components/Icon";
 
@@ -77,10 +77,9 @@ export function BranchesPage() {
 
   return (
     <div className="stack">
-      <div className="spread">
-        <h1>Filiallar</h1>
-        {!editing && <button className="btn btn-primary" onClick={() => { setEditing("new"); setMessage(null); }}>+ Yangi filial</button>}
-      </div>
+      <PageHeader title="Filiallar">
+        {!editing && <button className="btn btn-primary" onClick={() => { setEditing("new"); setMessage(null); }}><Icon name="plus" size={18} /> Yangi filial</button>}
+      </PageHeader>
       {message && <Success>{message}</Success>}
       {editing && (
         <BranchForm key={editing === "new" ? "new" : editing.id} branch={editing === "new" ? null : editing}

@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import type { Color, NamedRef, Page, Product, Size } from "../api/types";
 import { ImagePicker } from "../components/ImagePicker";
-import { ErrorBox, Field, Loading } from "../components/ui";
+import { ErrorBox, Field, Loading, PageHeader } from "../components/ui";
 import { useAsync } from "../utils/useAsync";
 
 export function Chips<T extends NamedRef>({ items, selected, onToggle }: { items: T[]; selected: number[]; onToggle: (id: number) => void }) {
@@ -124,7 +124,7 @@ export function ProductFormPage() {
 
   return (
     <form className="stack" style={{ maxWidth: 760 }} onSubmit={submit}>
-      <h1>Yangi tovar</h1>
+      <PageHeader title="Yangi tovar" />
       {error && <ErrorBox message={error} />}
       <div className="card stack">
         <div className="grid-2">

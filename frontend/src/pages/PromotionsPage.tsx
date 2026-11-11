@@ -5,7 +5,7 @@ import { api, ApiError, qs } from "../api/client";
 import type {
   NamedRef, Page, PricingSettings, Product, Promotion, PromotionKind, PromotionScope, PromotionStatus,
 } from "../api/types";
-import { Empty, ErrorBox, Field, Loading, Success } from "../components/ui";
+import { Empty, ErrorBox, Field, Loading, PageHeader, Success } from "../components/ui";
 import { money } from "../utils/format";
 import { useAsync, useDebounced } from "../utils/useAsync";
 import { Icon } from "../components/Icon";
@@ -369,10 +369,9 @@ export function PromotionsPage() {
 
   return (
     <div className="stack">
-      <div className="spread">
-        <h1>Aksiyalar</h1>
-        {!editing && <button className="btn btn-primary" onClick={() => { setEditing("new"); setMessage(null); }}>+ Yangi aksiya</button>}
-      </div>
+      <PageHeader title="Aksiyalar">
+        {!editing && <button className="btn btn-primary" onClick={() => { setEditing("new"); setMessage(null); }}><Icon name="plus" size={18} /> Yangi aksiya</button>}
+      </PageHeader>
       {message && <Success>{message}</Success>}
       {actionError && <ErrorBox message={actionError} />}
       {editing && (

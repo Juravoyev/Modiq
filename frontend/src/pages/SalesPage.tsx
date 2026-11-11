@@ -4,7 +4,7 @@ import { api, qs } from "../api/client";
 import type { Page, Sale } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
 import { Receipt } from "../components/Receipt";
-import { Empty, ErrorBox, Loading, Pagination, Success } from "../components/ui";
+import { Empty, ErrorBox, Loading, PageHeader, Pagination, Success } from "../components/ui";
 import { dateTime, money } from "../utils/format";
 import { useAsync } from "../utils/useAsync";
 import { bonusNote, ReturnForm } from "./ReturnsPage";
@@ -58,7 +58,7 @@ export function SalesPage() {
 
   return (
     <div className="stack">
-      <h1>Savdolar · {branch?.name}</h1>
+      <PageHeader title="Savdolar" subtitle={branch?.name} />
       <div className="card flush">
         {loading ? <Loading /> : error ? <div className="pad"><ErrorBox message={error} onRetry={reload} /></div> :
           !data?.results.length ? <Empty title="Hali savdo yo'q" hint="Kassa sahifasida birinchi savdoni qiling." /> : (

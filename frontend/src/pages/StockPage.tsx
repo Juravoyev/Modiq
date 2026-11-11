@@ -3,7 +3,7 @@ import { useState } from "react";
 import { api, qs } from "../api/client";
 import type { Page, StockRow } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
-import { Empty, ErrorBox, Loading, Pagination, StockBadge } from "../components/ui";
+import { Empty, ErrorBox, Loading, PageHeader, Pagination, StockBadge } from "../components/ui";
 import { dateTime } from "../utils/format";
 import { useAsync, useDebounced } from "../utils/useAsync";
 
@@ -20,7 +20,7 @@ export function StockPage() {
 
   return (
     <div className="stack">
-      <h1>Qoldiq · {branch?.name}</h1>
+      <PageHeader title="Qoldiq" subtitle={branch?.name} />
       <div className="row">
         <input className="input" style={{ flex: 1, minWidth: 200 }} type="search" placeholder="SKU yoki tovar nomi"
                value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} />

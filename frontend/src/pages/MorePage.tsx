@@ -3,13 +3,14 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { Icon } from "../components/Icon";
 import { navFor } from "../components/Layout";
+import { PageHeader } from "../components/ui";
 
 /** Telefonda pastki menyuga sig'magan bo'limlar. */
 export function MorePage() {
   const { isManager, me, logout } = useAuth();
   return (
     <div className="stack">
-      <h1>Bo'limlar</h1>
+      <PageHeader title="Bo'limlar" />
       <div className="stack gap-2">
         {navFor(isManager).map((n) => (
           <Link key={n.to} to={n.to} className="result-item" style={{ textDecoration: "none", color: "inherit" }}>

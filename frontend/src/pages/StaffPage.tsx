@@ -3,7 +3,7 @@ import { useState, type FormEvent } from "react";
 import { api, ApiError } from "../api/client";
 import type { Branch, Member, Page, Role } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
-import { Empty, ErrorBox, Field, Loading, Success, PasswordInput } from "../components/ui";
+import { Empty, ErrorBox, Field, Loading, PageHeader, PasswordInput, Success } from "../components/ui";
 import { useAsync } from "../utils/useAsync";
 import { Chips, toggle } from "./ProductFormPage";
 import { Icon } from "../components/Icon";
@@ -124,10 +124,9 @@ export function StaffPage() {
 
   return (
     <div className="stack">
-      <div className="spread">
-        <h1>Xodimlar</h1>
-        {isOwner && !editing && <button className="btn btn-primary" onClick={() => { setEditing("new"); setMessage(null); }}>+ Yangi xodim</button>}
-      </div>
+      <PageHeader title="Xodimlar">
+        {isOwner && !editing && <button className="btn btn-primary" onClick={() => { setEditing("new"); setMessage(null); }}><Icon name="plus" size={18} /> Yangi xodim</button>}
+      </PageHeader>
       {!isOwner && <div className="alert alert-warn">Xodimlarni faqat do'kon egasi qo'shadi va o'zgartiradi.</div>}
       {message && <Success>{message}</Success>}
       {editing && (
