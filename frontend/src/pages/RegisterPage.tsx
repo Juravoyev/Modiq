@@ -4,7 +4,7 @@ import { Link, Navigate } from "react-router-dom";
 import { ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { Logo } from "../components/Logo";
-import { ErrorBox, Field } from "../components/ui";
+import { ErrorBox, Field, PasswordInput } from "../components/ui";
 
 export function RegisterPage() {
   const { me, register } = useAuth();
@@ -49,7 +49,7 @@ export function RegisterPage() {
                  onChange={set("phone")} autoComplete="username" required />
         </Field>
         <Field label="Parol" error={fields.password} hint="Kamida 8 belgi, faqat raqamlardan iborat bo'lmasin">
-          <input className={`input ${fields.password ? "invalid" : ""}`} type="password" value={form.password}
+          <PasswordInput className={fields.password ? "invalid" : ""} value={form.password}
                  onChange={set("password")} autoComplete="new-password" minLength={8} required />
         </Field>
         <button className="btn btn-primary btn-lg" disabled={busy}>{busy ? "Yaratilmoqda..." : "Do'konni yaratish"}</button>

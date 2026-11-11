@@ -3,7 +3,7 @@ import { useState, type FormEvent } from "react";
 import { api, ApiError } from "../api/client";
 import type { Branch, Member, Page, Role } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
-import { Empty, ErrorBox, Field, Loading, Success } from "../components/ui";
+import { Empty, ErrorBox, Field, Loading, Success, PasswordInput } from "../components/ui";
 import { useAsync } from "../utils/useAsync";
 import { Chips, toggle } from "./ProductFormPage";
 
@@ -64,7 +64,7 @@ function MemberForm({ member, branches, onSaved, onCancel }: {
         </Field>
         <Field label={member ? "Yangi parol" : "Parol *"} error={fields.password}
                hint={member ? "Bo'sh qoldirilsa, parol o'zgarmaydi" : "Kamida 8 belgi"}>
-          <input className="input" type="password" autoComplete="new-password" value={form.password}
+          <PasswordInput autoComplete="new-password" value={form.password}
                  onChange={(e) => setForm({ ...form, password: e.target.value })} required={!member} minLength={8} />
         </Field>
         {!isOwnerRow && (

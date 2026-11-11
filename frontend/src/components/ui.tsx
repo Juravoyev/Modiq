@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+import { useState, type InputHTMLAttributes, type ReactNode } from "react";
+
+import { Icon } from "./Icon";
 
 export function Loading({ text = "Yuklanmoqda..." }: { text?: string }) {
   return (
@@ -79,4 +81,21 @@ export function ProductThumb({ src, size = 40, alt = "" }: { src: string | null 
   return src
     ? <img className="thumb" src={src} alt={alt} width={size} height={size} loading="lazy" />
     : <span className="thumb thumb-empty" style={{ width: size, height: size }} aria-hidden="true">👕</span>;
+}
+
+/** Parol maydoni: ko'z tugmasi parolni ko'rsatadi yoki yashiradi. */
+export function PasswordInput({ className = "", ...props }: Omit<InputHTMLAttributes<HTMLInputElement>, "type">) {
+  const [shown, setShown] = useState(false);
+  return (
+    <span className="password-input">
+      <input {...props} type={shown ? "text" : "password"} className={`input ${className}`.trim()} />
+      <button
+        type="button" className="password-toggle" onClick={() => setShown((s) => !s)}
+        aria-label={shown ? "Parolni yashirish" : "Parolni ko'rsatish"} aria-pressed={shown}
+        title={shown ? "Parolni yashirish" : "Parolni ko'rsatish"}
+      >
+        <Icon name={shown ? "eye-off" : "eye"} size={18} />
+      </button>
+    </span>
+  );
 }

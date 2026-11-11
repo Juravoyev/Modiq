@@ -219,3 +219,14 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
   .assistant-topics { grid-template-columns: 1fr; }
 }
 @media print { .assistant-panel, .assistant-backdrop { display: none !important; } }
+
+/* Parol maydoni: o'ng tomonida ko'rsatish/yashirish tugmasi */
+.password-input { position: relative; display: block; }
+.password-input .input { padding-right: 46px; }
+.password-toggle {
+  position: absolute; top: 50%; right: 4px; transform: translateY(-50%);
+  width: 38px; height: 34px; display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 6px; background: none; color: var(--muted); cursor: pointer;
+}
+.password-toggle:hover { color: var(--green-dark); background: var(--bg); }
+.password-toggle:focus-visible { outline: 2px solid var(--green); outline-offset: 0; }

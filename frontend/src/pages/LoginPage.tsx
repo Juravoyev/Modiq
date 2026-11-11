@@ -4,7 +4,7 @@ import { Link, Navigate } from "react-router-dom";
 import { ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { Logo } from "../components/Logo";
-import { ErrorBox, Field } from "../components/ui";
+import { ErrorBox, Field, PasswordInput } from "../components/ui";
 
 export function LoginPage() {
   const { me, login } = useAuth();
@@ -41,7 +41,7 @@ export function LoginPage() {
                  onChange={(e) => setPhone(e.target.value)} required />
         </Field>
         <Field label="Parol">
-          <input className="input" type="password" autoComplete="current-password" value={password}
+          <PasswordInput autoComplete="current-password" value={password}
                  onChange={(e) => setPassword(e.target.value)} required />
         </Field>
         <button className="btn btn-primary btn-lg" disabled={busy}>{busy ? "Kirilmoqda..." : "Kirish"}</button>
