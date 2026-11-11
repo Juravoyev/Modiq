@@ -48,7 +48,7 @@ export function ProductsPage() {
                       <tr className="clickable" onClick={() => setOpen(open === p.id ? null : p.id)}>
                         <td>
                           <div className="row gap-3 nowrap">
-                            <span aria-hidden="true">{open === p.id ? "▾" : "▸"}</span>
+                            <Icon name={open === p.id ? "chevron-down" : "chevron-right"} size={16} className="muted" />
                             <ProductThumb src={p.image} alt={p.name} />
                             <span><b>{p.name}</b>
                               {!p.is_active && <span className="badge badge-neutral" style={{ marginLeft: 6 }}>Nofaol</span>}</span>

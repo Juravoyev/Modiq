@@ -190,8 +190,26 @@ a { color: var(--green); }
 /* Jadval */
 .table-wrap { overflow-x: auto; }
 table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
-.table th { text-align: left; font-weight: 600; color: var(--muted); padding: 10px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
-.table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.table th {
+  text-align: left; font-weight: 600; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted);
+  padding: 10px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; background: #f8faf9;
+}
+.table th.right { text-align: right; }
+.table td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.card:not(.flush) > .table th, .card:not(.flush) > .table-wrap th, .table .table th { background: none; }
+.cell-title { font-weight: 600; }
+
+/* Telefonda: keng jadvallar siqilmaydi, yon tomonga suriladi; .table-cards esa kartochkalarga aylanadi. */
+@media (max-width: 760px) {
+  .table-wrap > .table:not(.table-cards) { min-width: 620px; }
+  .table-cards thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .table-cards, .table-cards tbody { display: block; }
+  .table-cards tr { display: block; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .table-cards tr:last-child { border-bottom: none; }
+  .table-cards td { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 3px 0; border: none; text-align: right; }
+  .table-cards td[data-label]::before { content: attr(data-label); color: var(--muted); font-size: 13px; text-align: left; font-weight: 400; }
+  .table-cards td.cell-title { font-size: 15px; padding-bottom: 6px; text-align: left; }
+}
 .table tr:last-child td { border-bottom: none; }
 .table tbody tr { transition: background var(--ease); }
 .table tbody tr:hover { background: #f8faf9; }
@@ -213,9 +231,29 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 8px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Auth sahifalari */
-.auth-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
-.auth-card { width: 100%; max-width: 400px; }
+/* Auth sahifalari: chapda brend paneli, o'ngda forma */
+.auth-page { min-height: 100vh; display: grid; grid-template-columns: minmax(360px, 5fr) 7fr; background: var(--white); }
+.auth-brand {
+  display: flex; flex-direction: column; justify-content: space-between; gap: 32px; padding: 48px; color: #fff;
+  background: radial-gradient(circle at 15% 10%, #1b6a50 0%, transparent 55%), linear-gradient(160deg, #0d4a37 0%, var(--green-dark) 70%);
+}
+.auth-brand-logo { display: flex; align-items: center; gap: 12px; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; }
+.auth-brand-title { font-size: 32px; font-weight: 700; line-height: 1.2; letter-spacing: -0.02em; max-width: 14em; }
+.auth-brand-list { list-style: none; margin: 24px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px; color: #d5e8df; font-size: 15px; }
+.auth-brand-list li { display: flex; gap: 10px; align-items: flex-start; line-height: 1.4; }
+.auth-brand-list .icon { color: #5fd3a8; margin-top: 1px; }
+.auth-brand-foot { color: #9dbfb1; font-size: 13px; }
+.auth-main { display: flex; align-items: center; justify-content: center; padding: 32px 20px; }
+.auth-card { width: 100%; max-width: 380px; gap: var(--space-4); }
+.auth-card form { gap: var(--space-4); }
+.auth-card h1 { font-size: 28px; }
+.auth-mobile-logo { display: none; align-items: center; gap: 10px; font-size: 22px; font-weight: 700; color: var(--green-dark); }
+@media (max-width: 860px) {
+  .auth-page { grid-template-columns: 1fr; background: var(--bg); }
+  .auth-brand { display: none; }
+  .auth-mobile-logo { display: flex; }
+  .auth-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px 20px; }
+}
 
 /* Kassa */
 .pos { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: var(--space-5); align-items: start; }
@@ -337,13 +375,17 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 /* Hisobot: ko'rsatkich kartochkalari va kunlik tushum grafigi */
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
 .tile { display: flex; flex-direction: column; gap: 4px; }
-.tile-value { font-size: 22px; font-weight: 700; color: var(--green-dark); }
+.tile-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.tile-icon { flex: none; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: var(--green-soft); color: var(--green); }
+.tile-icon-warn { background: var(--warning-soft); color: #92400e; }
+.section-title { margin-top: var(--space-1); }
+.tile-value { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; color: var(--green-dark); }
 .tile-warn { color: #92400e; }
 .chart { display: flex; flex-direction: column; gap: 6px; }
 .chart-tooltip { font-size: 14px; min-height: 20px; }
 .chart-plot { position: relative; height: 180px; display: flex; align-items: flex-end; gap: 2px; border-bottom: 1px solid var(--border); margin-left: 0; }
 .chart-gridline { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--border); pointer-events: none; }
-.chart-gridline span { position: absolute; right: 0; top: -16px; font-size: 11px; color: var(--muted); background: var(--white); padding-left: 4px; }
+.chart-gridline span { position: absolute; right: 0; top: -8px; z-index: 1; font-size: 11px; color: var(--muted); background: var(--white); padding: 0 0 0 6px; border-radius: 4px; }
 .chart-col { flex: 1; height: 100%; display: flex; align-items: flex-end; cursor: pointer; min-width: 0; }
 .chart-bar { width: 100%; max-width: 28px; margin: 0 auto; background: var(--green); border-radius: 4px 4px 0 0; min-height: 0; opacity: 0.85; }
 .chart-col.on .chart-bar, .chart-col:hover .chart-bar { opacity: 1; background: var(--green-dark); }

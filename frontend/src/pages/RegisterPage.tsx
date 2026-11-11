@@ -3,7 +3,7 @@ import { Link, Navigate } from "react-router-dom";
 
 import { ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import { Logo } from "../components/Logo";
+import { AuthShell } from "../components/AuthShell";
 import { ErrorBox, Field, PasswordInput } from "../components/ui";
 
 export function RegisterPage() {
@@ -34,9 +34,8 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="auth-page">
-      <form className="card auth-card stack" onSubmit={submit}>
-        <div className="row gap-3"><Logo size={36} /><h1>Ro'yxatdan o'tish</h1></div>
+    <AuthShell title="Ro'yxatdan o'tish" subtitle="Do'koningizni bir daqiqada oching">
+      <form className="stack" onSubmit={submit}>
         {error && <ErrorBox message={error} />}
         <Field label="Do'kon nomi" error={fields.business_name}>
           <input className="input" value={form.business_name} onChange={set("business_name")} required />
@@ -57,6 +56,6 @@ export function RegisterPage() {
           Hisobingiz bormi? <Link to="/login">Kirish</Link>
         </p>
       </form>
-    </div>
+    </AuthShell>
   );
 }

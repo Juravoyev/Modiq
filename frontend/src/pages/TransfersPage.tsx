@@ -183,7 +183,7 @@ export function TransfersPage() {
                   {list.data.results.map((t) => (
                     <Fragment key={t.id}>
                       <tr className="clickable" onClick={() => setOpen(open === t.id ? null : t.id)}>
-                        <td>{open === t.id ? "▾" : "▸"} {t.id}</td>
+                        <td className="nowrap"><Icon name={open === t.id ? "chevron-down" : "chevron-right"} size={16} className="muted" /> {t.id}</td>
                         <td>{dateTime(t.created_at)}</td>
                         <td>{t.from_branch_name} → {t.to_branch_name}{t.note && <div className="muted">{t.note}</div>}</td>
                         <td className="right num">{t.lines.reduce((n, l) => n + l.quantity, 0)}</td>

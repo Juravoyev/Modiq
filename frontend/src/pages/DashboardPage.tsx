@@ -6,7 +6,7 @@ import { useAuth } from "../auth/AuthContext";
 import { Empty, ErrorBox, Loading, PageHeader } from "../components/ui";
 import { money } from "../utils/format";
 import { useAsync } from "../utils/useAsync";
-import { Icon } from "../components/Icon";
+import { Icon, type IconName } from "../components/Icon";
 
 interface Dashboard {
   days: number;
@@ -23,10 +23,13 @@ interface Dashboard {
   pending_returns: number;
 }
 
-function Tile({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: "warn" }) {
+function Tile({ label, value, hint, tone, icon }: { label: string; value: string; hint?: string; tone?: "warn"; icon: IconName }) {
   return (
     <div className="card tile">
-      <div className="muted">{label}</div>
+      <div className="tile-head">
+        <span className="muted">{label}</span>
+        <span className={`tile-icon ${tone === "warn" ? "tile-icon-warn" : ""}`}><Icon name={icon} size={18} /></span>
+      </div>
       <div className={`tile-value num ${tone === "warn" ? "tile-warn" : ""}`}>{value}</div>
       {hint && <div className="muted">{hint}</div>}
     </div>
@@ -109,22 +112,22 @@ export function DashboardPage() {
             </Link>
           )}
 
-          <h2 style={{ margin: "4px 0 0" }}>Bugun</h2>
+          <h2 className="section-title">Bugun</h2>
           <div className="tiles">
-            <Tile label="Tushum" value={money(data.today.revenue)} />
-            <Tile label="Savdolar" value={String(data.today.sales_count)} hint={`O'rtacha chek: ${money(data.today.avg_check)}`} />
-            <Tile label="Qaytarilgan pul" value={money(data.today.refunds)} />
+            <Tile icon="wallet" label="Tushum" value={money(data.today.revenue)} />
+            <Tile icon="receipt" label="Savdolar" value={String(data.today.sales_count)} hint={`O'rtacha chek: ${money(data.today.avg_check)}`} />
+            <Tile icon="undo" label="Qaytarilgan pul" value={money(data.today.refunds)} />
           </div>
 
-          <h2 style={{ margin: "4px 0 0" }}>Oxirgi {data.days} kun</h2>
+          <h2 className="section-title">Oxirgi {data.days} kun</h2>
           <div className="tiles">
-            <Tile label="Tushum" value={money(data.period.revenue)} hint={`${data.period.sales_count} ta savdo · o'rtacha ${money(data.period.avg_check)}`} />
-            <Tile label="Taxminiy yalpi foyda" value={money(data.period.gross_profit)}
+            <Tile icon="wallet" label="Tushum" value={money(data.period.revenue)} hint={`${data.period.sales_count} ta savdo · o'rtacha ${money(data.period.avg_check)}`} />
+            <Tile icon="trending" label="Taxminiy yalpi foyda" value={money(data.period.gross_profit)}
                   hint="Tushum − qaytarilgan − tannarx. Ijara, maosh hisobga olinmagan" />
-            <Tile label="Yaroqsiz tovar (hisobdan chiqarilgan)" value={money(data.period.written_off)}
+            <Tile icon="alert" label="Yaroqsiz tovar (hisobdan chiqarilgan)" value={money(data.period.written_off)}
                   hint={`${data.period.returns_count} ta qaytarish · mijozga ${money(data.period.refunds)}`}
                   tone={Number(data.period.written_off) > 0 ? "warn" : undefined} />
-            <Tile label="Ombordagi tovar (tannarxda)" value={money(data.stock.value)}
+            <Tile icon="box" label="Ombordagi tovar (tannarxda)" value={money(data.stock.value)}
                   hint={`${data.stock.units} dona · ${data.stock.low_count} ta variant kam qolgan`} />
           </div>
 

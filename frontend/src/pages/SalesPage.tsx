@@ -63,7 +63,7 @@ export function SalesPage() {
         {loading ? <Loading /> : error ? <div className="pad"><ErrorBox message={error} onRetry={reload} /></div> :
           !data?.results.length ? <Empty title="Hali savdo yo'q" hint="Kassa sahifasida birinchi savdoni qiling." /> : (
             <div className="table-wrap">
-              <table className="table">
+              <table className="table table-cards">
                 <thead>
                   <tr>
                     <th>Chek</th><th>Vaqt</th><th>Sotuvchi</th><th>To'lov</th><th className="right">Tovar</th>
@@ -73,13 +73,13 @@ export function SalesPage() {
                 <tbody>
                   {data.results.map((s) => (
                     <tr key={s.id} className="clickable" onClick={() => setSelected(s)}>
-                      <td>№ {s.id}</td>
-                      <td>{dateTime(s.created_at)}</td>
-                      <td>{s.cashier_name || "—"}</td>
-                      <td>{s.payment_type_display}</td>
-                      <td className="right num">{s.lines.reduce((n, l) => n + l.quantity, 0)}</td>
-                      <td className="right num"><b>{money(s.total)}</b></td>
-                      {isManager && <td className="right num">{money(s.gross_profit)}</td>}
+                      <td className="cell-title">№ {s.id}</td>
+                      <td data-label="Vaqt">{dateTime(s.created_at)}</td>
+                      <td data-label="Sotuvchi">{s.cashier_name || "—"}</td>
+                      <td data-label="To'lov">{s.payment_type_display}</td>
+                      <td data-label="Tovar" className="right num">{s.lines.reduce((n, l) => n + l.quantity, 0)}</td>
+                      <td data-label="Jami" className="right num"><b>{money(s.total)}</b></td>
+                      {isManager && <td data-label="Taxminiy yalpi foyda" className="right num">{money(s.gross_profit)}</td>}
                     </tr>
                   ))}
                 </tbody>

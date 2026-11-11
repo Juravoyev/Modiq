@@ -3,7 +3,7 @@ import { Link, Navigate } from "react-router-dom";
 
 import { ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import { Logo } from "../components/Logo";
+import { AuthShell } from "../components/AuthShell";
 import { ErrorBox, Field, PasswordInput } from "../components/ui";
 
 export function LoginPage() {
@@ -31,10 +31,8 @@ export function LoginPage() {
   }
 
   return (
-    <div className="auth-page">
-      <form className="card auth-card stack" onSubmit={submit}>
-        <div className="row gap-3"><Logo size={36} /><h1>Modiq</h1></div>
-        <p className="muted">Do'koningiz hisobiga kiring</p>
+    <AuthShell title="Xush kelibsiz" subtitle="Do'koningiz hisobiga kiring">
+      <form className="stack" onSubmit={submit}>
         {error && <ErrorBox message={error} />}
         <Field label="Telefon raqami">
           <input className="input" type="tel" inputMode="tel" autoComplete="username" value={phone}
@@ -49,6 +47,6 @@ export function LoginPage() {
           Hisobingiz yo'qmi? <Link to="/register">Do'konni ro'yxatdan o'tkazish</Link>
         </p>
       </form>
-    </div>
+    </AuthShell>
   );
 }
