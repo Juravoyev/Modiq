@@ -79,6 +79,24 @@ echo 'ssh-ed25519 AAAA... ' >> ~/.ssh/authorized_keys
 ssh -i ~/.ssh/modiq_ec2 ubuntu@<IP>
 ```
 
+## Tez yo'l: skriptlar
+
+4-6 bo'limlardagi hamma ishni bitta skript bajaradi (Ubuntu serverda, SSH bilan kirgandan keyin):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Juravoyev/Modiq/main/scripts/server-setup.sh | bash
+```
+
+U domen va Gemini kalitini so'raydi, parollarni o'zi yaratadi, swap, Docker va loyihani o'rnatadi, ishga tushiradi va demo ma'lumotni yuklashni taklif qiladi.
+
+Keyinchalik yangi kodni qo'llash (8-bo'lim o'rniga):
+
+```bash
+~/Modiq/scripts/deploy.sh
+```
+
+Quyidagi bo'limlar shu skriptlar ichida nima bo'layotganini qadamma-qadam tushuntiradi.
+
 ## 4. Serverni tayyorlash (bir marta)
 
 1 GB RAM frontendni yig'ish uchun kamlik qilishi mumkin, shuning uchun 2 GB swap qo'shamiz:
