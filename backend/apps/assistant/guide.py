@@ -14,8 +14,8 @@ TOPICS = [
         "id": "sale", "icon": "🧾", "roles": "all", "page": "/", "link": "Kassaga o'tish",
         "title": "Savdo qilish", "subtitle": "Kassada tovar sotish va chek",
         "body": """1. Chap menyudan «Kassa» bo'limini oching.
-2. Qidiruv maydoniga SKU, shtrix-kod yoki tovar nomini yozing. Skaner bilan o'qitsangiz, bitta natija bo'lsa tovar o'zi savatga tushadi.
-3. Natijalardan kerakli rang va o'lchamni bosing: tovar o'ngdagi «Savat»ga qo'shiladi.
+2. Qidiruv maydoniga SKU, shtrix-kod yoki tovar nomini yozing. Skaner bilan o'qitsangiz, bitta natija bo'lsa tovar o'zi savatga tushadi. Qidiruv bo'sh bo'lsa, tovarlar rasmli kartochkalar bo'lib ko'rinib turadi.
+3. Kerakli rang va o'lchamdagi kartochkani bosing: tovar o'ngdagi «Savat»ga qo'shiladi (telefonda savat pastda, unga pastdagi «Savat» paneli olib boradi).
 4. Savatda «−» va «+» bilan sonini o'zgartiring. Qoldiqdan ko'p qo'shib bo'lmaydi.
 5. To'lov turini tanlang: «Naqd», «Karta» yoki «Onlayn».
 6. «Savdoni yakunlash» tugmasini bosing. Chek chiqadi: «Chop etish» yoki «Yangi savdo».

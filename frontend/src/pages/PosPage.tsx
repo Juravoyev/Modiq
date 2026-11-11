@@ -5,7 +5,7 @@ import type { CustomerBrief, Page, PaymentType, Quote, Sale, Variant } from "../
 import { useAuth } from "../auth/AuthContext";
 import { CustomerPicker } from "../components/CustomerPicker";
 import { Receipt } from "../components/Receipt";
-import { Empty, ErrorBox, Loading, ProductThumb } from "../components/ui";
+import { Empty, ErrorBox, PageHeader, ProductThumb } from "../components/ui";
 import { money, newIdempotencyKey } from "../utils/format";
 import { useAsync, useDebounced } from "../utils/useAsync";
 import { Icon } from "../components/Icon";
@@ -34,6 +34,7 @@ export function PosPage() {
   const [belowCostConfirmed, setBelowCostConfirmed] = useState(false);
   const [done, setDone] = useState<Sale | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const cartRef = useRef<HTMLElement>(null);
 
   // Yakuniy narxni (aksiya, imtiyoz, chegirma) backend hisoblaydi: savdo yakunlanganda ham aynan shu qoidalar ishlaydi.
   const cartKey = JSON.stringify({
@@ -64,10 +65,9 @@ export function PosPage() {
   useEffect(() => { if (!customer) setBonusInfo(null); }, [customer]);
   const quoteLine = (id: number) => fresh?.data?.lines.find((l) => l.variant === id);
 
+  // Qidiruv bo'sh bo'lsa, tovarlarning birinchi sahifasi ko'rsatiladi: bosib savatga qo'shish mumkin.
   const results = useAsync(
-    () => search
-      ? api<Page<Variant>>(`/catalog/variants/${qs({ search, branch: branch?.id, is_active: true })}`)
-      : Promise.resolve(null),
+    () => api<Page<Variant>>(`/catalog/variants/${qs({ search: search || undefined, branch: branch?.id, is_active: true, page_size: 24 })}`),
     [search, branch?.id],
   );
 
@@ -104,7 +104,7 @@ export function PosPage() {
 
   function onSearchKey(e: KeyboardEvent<HTMLInputElement>) {
     // Shtrix-kod skaneri Enter yuboradi: bitta natija bo'lsa, darhol savatga qo'shiladi.
-    if (e.key === "Enter" && results.data?.results.length === 1) add(results.data.results[0]);
+    if (e.key === "Enter" && search && !results.loading && results.data?.results.length === 1) add(results.data.results[0]);
   }
 
   const setQty = (id: number, q: number) =>
@@ -146,6 +146,7 @@ export function PosPage() {
         },
       });
       setDone(sale);
+      results.reload(); // qoldiqlar o'zgardi
       setCart([]);
       setCustomerState(null);
       setBonusInput("");
@@ -165,11 +166,15 @@ export function PosPage() {
   if (done) {
     return (
       <div className="stack" style={{ maxWidth: 420, margin: "0 auto" }}>
-        <div className="alert alert-success no-print"><span aria-hidden="true">✓</span> Savdo yakunlandi</div>
+        <div className="sale-done no-print" role="status">
+          <span className="sale-done-icon"><Icon name="check" size={28} /></span>
+          <h1>Savdo yakunlandi</h1>
+          <span className="muted">Chek № {done.id} · {money(done.total)}</span>
+        </div>
         <div className="card"><Receipt sale={done} businessName={me?.business.name ?? ""} /></div>
         <div className="row no-print">
-          <button className="btn btn-secondary grow" onClick={() => window.print()}>Chop etish</button>
-          <button className="btn btn-primary grow" onClick={() => setDone(null)}>Yangi savdo</button>
+          <button className="btn btn-secondary grow" onClick={() => window.print()}><Icon name="printer" size={17} /> Chop etish</button>
+          <button className="btn btn-primary grow" onClick={() => setDone(null)}><Icon name="plus" size={17} /> Yangi savdo</button>
         </div>
       </div>
     );
@@ -178,51 +183,69 @@ export function PosPage() {
   return (
     <div className="pos">
       <section className="stack">
-        <h1>Kassa</h1>
-        <input
-          ref={searchRef} className="input" style={{ minHeight: 50, fontSize: 16 }} type="search"
-          placeholder="SKU, shtrix-kod yoki tovar nomi" value={query} onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={onSearchKey} aria-label="Tovar qidirish"
-        />
-        {!search ? (
-          <p className="muted">Tovarni qidiring yoki shtrix-kodni skaner qiling.</p>
-        ) : results.loading ? (
-          <Loading text="Qidirilmoqda..." />
-        ) : results.error ? (
+        <PageHeader title="Kassa" subtitle={branch?.name} />
+        <div className="search-box">
+          <Icon name="search" size={20} />
+          <input
+            ref={searchRef} className="input" type="search"
+            placeholder="SKU, shtrix-kod yoki tovar nomi" value={query} onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={onSearchKey} aria-label="Tovar qidirish"
+          />
+        </div>
+        {results.error ? (
           <ErrorBox message={results.error} onRetry={results.reload} />
-        ) : !results.data?.results.length ? (
-          <Empty title="Hech narsa topilmadi" hint="Boshqa so'z yoki SKU bilan qidirib ko'ring." />
-        ) : (
-          <div className="stack gap-2">
-            {results.data.results.map((v) => {
-              const stock = v.stock ?? 0;
-              return (
-                <button key={v.id} className="result-item" onClick={() => add(v)} disabled={stock <= 0}>
-                  <div className="row" style={{ gap: 10, flexWrap: "nowrap", textAlign: "left" }}>
-                    <ProductThumb src={v.product_image} size={44} />
-                    <div>
-                    <div className="bold">{v.product_name}</div>
-                    <div className="muted">{v.color_name} · {v.size_name} · {v.sku}</div>
-                    </div>
-                  </div>
-                  <div className="right">
-                    <div className="num bold">{money(v.effective_sale_price)}</div>
-                    <div className={stock > 0 ? "muted" : "field-error"}>{stock > 0 ? `${stock} dona` : "Qoldiqda yo'q"}</div>
-                  </div>
-                </button>
-              );
-            })}
+        ) : !results.data ? (
+          <div className="product-grid" aria-hidden="true">
+            {Array.from({ length: 8 }, (_, i) => <div key={i} className="product-card skeleton" />)}
           </div>
+        ) : !results.data.results.length ? (
+          search
+            ? <Empty title="Hech narsa topilmadi" hint="Boshqa so'z yoki SKU bilan qidirib ko'ring." />
+            : <Empty title="Hali tovar yo'q" hint="Tovarlar bo'limida birinchi tovarni qo'shing." />
+        ) : (
+          <>
+            <p className="muted">
+              {search ? `Topildi: ${results.data.count} ta` : "Tovarni bosing, qidiring yoki shtrix-kodni skaner qiling."}
+            </p>
+            <div className={`product-grid ${results.loading ? "is-loading" : ""}`}>
+              {results.data.results.map((v) => {
+                const stock = v.stock ?? 0;
+                const inCart = cart.find((l) => l.variant.id === v.id)?.quantity ?? 0;
+                return (
+                  <button key={v.id} className={`product-card ${inCart ? "in-cart" : ""}`} onClick={() => add(v)} disabled={stock <= 0}>
+                    <span className="product-card-media">
+                      {v.product_image
+                        ? <img src={v.product_image} alt="" loading="lazy" />
+                        : <Icon name="shirt" size={36} />}
+                      {inCart > 0 && <span className="product-card-count num" aria-label={`Savatda ${inCart} dona`}>{inCart}</span>}
+                    </span>
+                    <span className="product-card-body">
+                      <span className="product-card-name">{v.product_name}</span>
+                      <span className="muted">{v.color_name} · {v.size_name}</span>
+                      <span className="product-card-foot">
+                        <b className="num">{money(v.effective_sale_price)}</b>
+                        <span className={stock > 0 ? "muted num" : "field-error"}>{stock > 0 ? `${stock} dona` : "Tugagan"}</span>
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </>
         )}
       </section>
 
-      <aside className="card pos-cart stack">
+      <aside className="card pos-cart stack" ref={cartRef}>
         <div className="spread">
-          <h2>Savat</h2>
+          <h2>Savat {cart.length > 0 && <span className="badge badge-ok num">{cart.reduce((n, l) => n + l.quantity, 0)}</span>}</h2>
           {cart.length > 0 && <button className="btn btn-secondary btn-sm" onClick={() => changeCart([])}>Tozalash</button>}
         </div>
         {cart.length === 0 ? (
-          <p className="muted">Savat bo'sh</p>
+          <div className="cart-empty">
+            <Icon name="cart" size={28} />
+            <b>Savat bo'sh</b>
+            <span className="muted">Tovarni bosing yoki shtrix-kodni skaner qiling</span>
+          </div>
         ) : (
           <div>
             {cart.map((l) => {
@@ -232,20 +255,21 @@ export function PosPage() {
               const lineTotal = ql ? Number(ql.line_total) : gross - Number(l.discount || 0);
               return (
                 <div key={l.variant.id} className="cart-line stack gap-2">
-                  <div className="spread">
-                    <div>
+                  <div className="cart-line-head">
+                    <ProductThumb src={l.variant.product_image} size={44} />
+                    <div className="grow">
                       <div className="bold">{l.variant.product_name}</div>
-                      <div className="muted">{l.variant.color_name} · {l.variant.size_name}</div>
+                      <div className="muted">{l.variant.color_name} · {l.variant.size_name} · {money(l.variant.effective_sale_price)}</div>
                     </div>
-                    <button className="btn btn-secondary btn-sm" aria-label="O'chirish"
-                            onClick={() => changeCart(cart.filter((x) => x.variant.id !== l.variant.id))}><Icon name="x" size={15} /></button>
+                    <button className="icon-btn" aria-label="O'chirish" title="O'chirish"
+                            onClick={() => changeCart(cart.filter((x) => x.variant.id !== l.variant.id))}><Icon name="x" size={16} /></button>
                   </div>
                   <div className="spread">
                     <div className="qty">
-                      <button onClick={() => setQty(l.variant.id, l.quantity - 1)} aria-label="Kamaytirish">−</button>
+                      <button onClick={() => setQty(l.variant.id, l.quantity - 1)} aria-label="Kamaytirish" disabled={l.quantity <= 1}><Icon name="minus" size={16} /></button>
                       <span className="num">{l.quantity}</span>
                       <button onClick={() => setQty(l.variant.id, l.quantity + 1)} aria-label="Ko'paytirish"
-                              disabled={l.quantity >= (l.variant.stock ?? 0)}>+</button>
+                              disabled={l.quantity >= (l.variant.stock ?? 0)}><Icon name="plus" size={16} /></button>
                     </div>
                     <span className="num right">
                       {lineTotal !== gross && <s className="muted" style={{ display: "block" }}>{money(gross)}</s>}
@@ -295,7 +319,7 @@ export function PosPage() {
           </div>
         )}
 
-        <div>
+        <div className="totals">
           <div className="total-row num"><span>Summa</span><span>{money(totals.subtotal)}</span></div>
           <div className="total-row num"><span>Chegirma</span><span>{totals.discount > 0 ? `−${money(totals.discount)}` : money(0)}</span></div>
           {fresh?.data && Number(fresh.data.bonus.used) > 0 && (
@@ -307,10 +331,10 @@ export function PosPage() {
           )}
         </div>
 
-        <div className="row" role="radiogroup" aria-label="To'lov turi">
+        <div className="segmented" role="radiogroup" aria-label="To'lov turi">
           {PAYMENTS.map((p) => (
             <button key={p.value} role="radio" aria-checked={payment === p.value}
-                    className={`chip ${payment === p.value ? "on" : ""}`} onClick={() => setPayment(p.value)}>
+                    className={payment === p.value ? "on" : ""} onClick={() => setPayment(p.value)}>
               {p.label}
             </button>
           ))}
@@ -331,6 +355,13 @@ export function PosPage() {
           {busy ? "Bajarilmoqda..." : cart.length > 0 && !fresh ? "Hisoblanmoqda..." : `Savdoni yakunlash · ${money(totals.total)}`}
         </button>
       </aside>
+
+      {cart.length > 0 && (
+        <button className="cart-bar no-print" onClick={() => cartRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+          <span className="row gap-2"><Icon name="cart" size={20} /> Savat · {cart.reduce((n, l) => n + l.quantity, 0)} dona</span>
+          <b className="num">{money(totals.total)}</b>
+        </button>
+      )}
     </div>
   );
 }
